@@ -1,8 +1,9 @@
 # Porting Browsy to macOS
 
 Notes for a Claude Code session running on a Mac. This repo was built and tested
-only on Windows 11. Nothing here has been run on macOS — treat every claim below
-as "expected", not "verified", until the test suite passes on your machine.
+only on Windows 11; the port was carried out and verified on **macOS 26.1,
+Apple silicon, Python 3.13.9, Chrome (stable)** — see "Port status" at the
+bottom for what was actually run.
 
 ## What Browsy is
 
@@ -18,7 +19,7 @@ Entry points:
 |---|---|
 | `daemon.py` | long-running chat panel in Chrome (the normal way to use it) |
 | `run_task.py "<task>"` | one-shot task, no panel interaction |
-| `tests/panel_check.py --headless` | 88-check interaction suite, drives real Chrome |
+| `tests/panel_check.py --headless` | 89-check interaction suite, drives real Chrome |
 | `evals/osworld_run.py` | OSWorld benchmark harness |
 
 ## The good news
@@ -39,14 +40,21 @@ Most of the code is already portable and needs no work:
 
 ## The work
 
-### 1. `run.sh` — the only hard blocker
+### 1. `run.sh` — the only hard blocker -- DONE
 
-`run.ps1` is PowerShell and assumes `.venv\Scripts\python.exe`. Write a sibling
-`run.sh` with the same interface: `--task`, `--start`, `--allow`, `--shots`,
-`--headless`, creating the venv if missing and using `.venv/bin/python`.
+`run.ps1` is PowerShell and assumes `.venv\Scripts\python.exe`. `run.sh` is now
+its sibling, same interface (`--task`, `--start`, `--allow`, `--shots`,
+`--headless`, plus a bare argument as the task), creating the venv from
+`requirements.txt` if missing and using `.venv/bin/python`.
 
-Leave `run.ps1` in place and working — this repo is meant to run on both
-platforms from one branch.
+It is written for **bash 3.2** — the one macOS ships. That is why empty arrays
+are expanded as `${cli[@]+"${cli[@]}"}`: under `set -u`, bash 3.2 treats a plain
+`"${cli[@]}"` on an empty array as an unbound variable and aborts. It also
+deliberately does not `set -e`: the agent logs progress to stderr and exits
+non-zero on a failed task, and that should surface, not abort the script.
+
+`run.ps1` is untouched — this repo is meant to run on both platforms from one
+branch.
 
 ### 2. The keyfile default -- ALREADY DONE
 
@@ -60,10 +68,11 @@ configured, and the key is never copied in, logged or echoed. Preserve that
 property. `cuaexp/keyfile.py` accepts either a bare key or a dotenv-style
 `OPENAI_API_KEY=...` line, so no parsing changes are needed.
 
-### 3. `requirements.txt`
+### 3. `requirements.txt` -- DONE
 
-There is no dependency manifest. The dependency list exists only as a pip
-command inside `run.ps1`. Versions known to work, on Python 3.12.10:
+There was no dependency manifest; the list existed only as a pip command inside
+`run.ps1`. `requirements.txt` now holds it. These pins install clean on macOS
+arm64 under Python 3.13.9 as well as 3.12.10:
 
 ```
 openai-agents==0.21.1
@@ -76,37 +85,35 @@ httpx==0.28.1
 `ping_timeout=None` to survive a page that floods the console. Do not relax
 those — a bounded queue starves the pong handler and the socket dies mid-run.
 
-### 4. Ctrl vs Cmd — the one real behavioural difference
+### 4. Ctrl vs Cmd — the one real behavioural difference -- DONE
 
-`cuaexp/actions.py` line 37:
+The model chooses the key name, and on macOS select-all/copy/paste are **Cmd**,
+not Ctrl. `_mod_bits()` in `cuaexp/actions.py` now rewrites `ctrl`/`control` to
+`meta` on Darwin (blanket, as recommended).
 
-```python
-MODS = {"ctrl": 2, "alt": 1, "shift": 8, "meta": 4, "cmd": 4}
-```
+**That rewrite alone is not enough**, and this is the part the original notes did
+not know about. Cmd-shortcuts are handled by the browser's editing layer, which a
+raw `Input.dispatchKeyEvent` never reaches: Cmd+A arrives at the renderer as a
+keydown nobody acts on. CDP's macOS-only `commands` field is the way through, so
+`_key()` attaches `["selectAll"]` / `["copy"]` / `["paste"]` / `["cut"]` /
+`["undo"]` / `["redo"]` (Cmd+Shift+Z → redo) to the keyDown for the meta
+shortcuts that need it. `nativeVirtualKeyCode` is now sent alongside
+`windowsVirtualKeyCode`.
 
-Both modifiers are supported, so `press("cmd+a")` already works. The problem is
-that the model chooses the key name, and on macOS select-all/copy/paste are
-**Cmd**, not Ctrl. A `ctrl+a` will dispatch cleanly and silently do nothing —
-the failure is invisible, which is the worst kind.
+Verified on hardware, both directions: `tests/panel_check.py` check *"ctrl+a
+selects all so typing replaces the field"* types `first`, sends `ctrl+a`, inserts
+`second`, and asserts the field holds `second`. With `IS_MAC` forced false the
+same sequence leaves `firstsecond` — exactly the silent append this section
+predicted.
 
-Rewrite `ctrl` to `meta` on Darwin inside `_key()`. Consider excluding the
-handful of shortcuts that genuinely stay Ctrl on macOS (`ctrl+a`/`ctrl+e` as
-Emacs-style line motions in text fields) only if you hit a real case; the blanket
-rewrite is the better default.
+### 5. `.gitattributes` -- ALREADY DONE
 
-This one needs verifying on hardware — write a test that types into a field,
-sends select-all, then types over it, and assert the field was replaced rather
-than appended.
-
-### 5. `.gitattributes`
-
-The Windows machine has `core.autocrlf=true` system-wide. All files are
-currently LF. Add `* text=auto eol=lf` so a Mac checkout does not receive CRLF.
+`* text=auto eol=lf` is already committed, and the Mac checkout arrived LF.
 
 ## Acceptance
 
 ```sh
-tests/panel_check.py --headless      # must be 88/88
+.venv/bin/python tests/panel_check.py --headless      # must be 89/89
 ```
 
 The suite drives real Chrome and asserts on rendered geometry — panel position,
@@ -125,3 +132,91 @@ and obvious on screen.
   request, and should stay out.
 - Do not commit `.chrome-profile/` (752 MB and live session cookies for every
   site logged into), `logs/`, or `history/`. `.gitignore` already covers them.
+
+
+## Port status (verified on macOS 26.1, Apple silicon)
+
+| Step | State |
+|---|---|
+| deps install (`requirements.txt`, Python 3.13.9, arm64) | clean, no build failures |
+| every `cuaexp` module imports | yes |
+| `find_chrome()` resolves | `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome` |
+| `tests/panel_check.py --headless` | **89/89**, three runs, identical |
+| `tests/panel_check.py` (visible Chrome) | 86-88/89, flaky -- see below, not a port defect |
+| end-to-end `run_task.py` against the live API | answered correctly, 13.8s, $0.016, logs + history written |
+| `evals/osworld_run.py 4 6 8 10` through the chat panel | **4/4 done**, 125s, $0.21 |
+| Cmd/Ctrl select-all | fixed and covered by a check |
+
+On the OSWorld subset macOS matched or beat the Windows baseline on the same four
+tasks (Windows: 3 done + 1 partial). #4 reached the same filtered listing in 5
+tool calls instead of 11; #6 returned the identical answer, down to the reply
+count; #10 went one better -- Windows named Super Bowl LIV correctly but admitted
+the page it had open was LIII, while this run opened the LIV recap itself and
+sourced the score from it.
+
+Four things were wrong that these notes did not anticipate:
+
+1. **The `commands` field**, above — rewriting `ctrl` to `meta` on its own still
+   left Cmd+A a no-op.
+2. **One check was path-dependent, not platform-dependent.** *"the agent cannot
+   see its own panel"* failed because it searched the whole rendered snapshot for
+   the string `Browsy`, and the checkout directory is itself called `Browsy`, so
+   the `file://` fixture URL in the snapshot header matched. Nothing had leaked.
+   The check now skips the `URL:`/`TITLE:` header lines. It would fail the same
+   way on Windows in a folder of that name.
+
+3. **The suite depended on the physical window size.** Chrome is asked for a
+   1440x1020 window; headless gives exactly that, and macOS clamps it to the
+   screen work area -- on a 1440x900 display the viewport comes out 717px tall
+   instead of 933. Three checks that assert in pixels (a 200px drag, a 55px
+   resize, the mascot's reach) then failed against the panel's own
+   keep-inside-the-viewport clamping. `pin_viewport()` now overrides the metrics
+   to `config.VIEWPORT` for the whole run, so headless and visible mean the same
+   thing. It is re-applied after the window-shrink check and after a CDP
+   reattach, because both drop it.
+
+4. **The eval harness could not type into the chat panel at all**, and the same
+   717px viewport is why. Every task died with `typing attempt N landed ''`.
+   `type_into_panel()` in `evals/osworld_run.py` clicked the compose box without
+   unfolding the panel first, and the folded box's rect sits at **y=875**:
+   inside a 933px viewport, below the fold in a 717px one. So the missing unfold
+   had always been a bug and a tall window had been hiding it -- nothing about
+   the fix is macOS-specific. It now calls `open_chat()` when the panel is
+   folded, and all four tasks ran clean afterwards. `evals/run_suite.py` drives
+   `BrowserAgent` directly and never touches the panel, so it cannot hit this.
+
+### The visible run is flaky, and it is the mouse on your desk
+
+With the viewport pinned, `--headless` is 89/89 every time. The **visible** run
+lands at 86-88/89, and a different subset fails each time -- always in the
+hover / drag / cursor-tracking family.
+
+Measured, not guessed: hovering Browsy six times in a row and logging every
+mousemove the page received gives, headless, six identical `gap=12px` with one
+mousemove each -- the one we sent. Visible, the same loop gives `12, 37, 12, 37,
+12, 12`, and every 37 comes with *stray* mousemove events at coordinates nobody
+dispatched. That is the real macOS pointer sitting over the Chrome window: it
+cancels the synthesized hover, the arm retracts, and the finger check measures
+mid-air.
+
+`Input.setIgnoreInputEvents` does not help -- it suppresses CDP-dispatched events
+along with real ones (verified: zero mousemoves reach the page, all six hovers
+fail).
+
+So: **`--headless` is the gate.** Run it visible to watch, as the acceptance
+notes say, but keep the physical pointer off the Chrome window while it runs, and
+read a pointer-family failure there as "the mouse moved", not as a regression --
+confirm it headless before believing it. This is not macOS-specific; the same
+would happen on Windows with the cursor parked over the window.
+
+Python 3.12 is not required: 3.13.9 runs everything. There is no `python3.12` in
+a default macOS/Homebrew install, so pinning it would have cost a toolchain
+install for nothing.
+
+Still unverified on macOS: `evals/run_suite.py`, and OSWorld tasks #1, #2, #3,
+#5, #7 and #9 -- skipped on cost, #2 alone was $3.68 on Windows.
+
+`evals/results/osworld.json` now stamps `host` and `ran` per task, and the report
+says outright when its rows come from more than one machine. The store
+accumulates across partial runs, so the first merged report read as a single
+ten-task run when six of its ten rows were still from Windows.

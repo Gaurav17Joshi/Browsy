@@ -1,0 +1,16 @@
+# Dependency manifest for Browsy.
+#
+#   python -m venv .venv
+#   .venv/bin/python -m pip install -r requirements.txt      # macOS / Linux
+#   .venv\Scripts\python.exe -m pip install -r requirements.txt   # Windows
+#
+# Versions known to work on Python 3.12.10 (Windows 11) and 3.13.9 (macOS 26,
+# Apple silicon).
+#
+# websockets>=14 matters: cuaexp/cdp.py relies on max_queue=None and
+# ping_timeout=None to survive a page that floods the console. Do not relax
+# those -- a bounded queue starves the pong handler and the socket dies mid-run.
+openai-agents==0.21.1
+openai==3.1.0
+websockets==16.1.1
+httpx==0.28.1

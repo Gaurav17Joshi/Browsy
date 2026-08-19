@@ -19,6 +19,7 @@ import argparse
 import asyncio
 import json
 import logging
+import platform
 import re
 import sys
 import time
@@ -31,7 +32,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 import daemon as dm                                   # noqa: E402
 from cuaexp import history                            # noqa: E402
 from evals.osworld_tasks import TASKS                 # noqa: E402
-from panel_check import Input, cursor_state, panel_state   # noqa: E402
+from panel_check import Input, cursor_state, open_chat, panel_state   # noqa: E402
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s %(levelname)-5s %(name)-14s %(message)s",
@@ -131,6 +132,14 @@ async def type_into_panel(cdp, inp, text, tries=3):
         if not st.get("mounted"):
             await asyncio.sleep(1.5)
             continue
+        # The resting state is Browsy folded away, so the compose box is not on
+        # screen yet -- unfold before aiming at it. Skipping this only appeared
+        # to work on a tall window, where the folded box's rect still landed
+        # inside the viewport; on a macOS window clamped to the screen work area
+        # it sits below the fold (y=875 in a 717px viewport) and every keystroke
+        # went nowhere.
+        if not st.get("open"):
+            st = await open_chat(cdp, inp)
         await inp.click(st["ta"]["x"], st["ta"]["y"])
         await inp.type(text[:12])
         if len(text) > 12:
@@ -272,6 +281,11 @@ async def main() -> int:
 
 def record(row: dict) -> None:
     """Merge one task's result into the store, so partial runs accumulate."""
+    # Stamp the machine. The store accumulates across partial runs, so a report
+    # can quietly end up mixing two operating systems and read as one run --
+    # which is exactly what happened the first time this was run on a Mac.
+    row["host"] = f"{platform.system()} {platform.release()} ({platform.machine()})"
+    row["ran"] = time.strftime("%Y-%m-%d")
     STORE.parent.mkdir(parents=True, exist_ok=True)
     rows = json.loads(STORE.read_text(encoding="utf-8")) if STORE.exists() else {}
     rows[str(row["spec"]["id"])] = row
@@ -322,6 +336,16 @@ def write_report() -> None:
       f"{tcache:,} ({100*tcache/tin if tin else 0:.0f}%) | {tout:,} | "
       f"**${tot_cost:.4f}** |")
     A("")
+    hosts: dict[str, list[str]] = {}
+    for r in results:
+        hosts.setdefault(r.get("host", "Windows 11 (original run)"), []).append(
+            str(r["spec"]["id"]))
+    if len(hosts) > 1:
+        A("Not one sitting: the store accumulates, so these rows come from more than "
+          "one machine. " + "; ".join(
+              f"**{h}** ran {', '.join('#' + i for i in ids)}"
+              for h, ids in hosts.items()) + ".")
+        A("")
     if graded:
         A(f"**{counts['pass']} done, {counts['partial']} partial, {counts['fail']} failed** "
           f"of {len(graded)} graded. Grading is by reading the answer against the page, not "

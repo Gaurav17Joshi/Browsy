@@ -12,6 +12,7 @@ import asyncio
 import base64
 import logging
 import re
+import sys
 
 from .cdp import CDP, CDPError
 from .snapshot import Perceiver, Ref
@@ -34,7 +35,33 @@ KEYS = {
     "End":        (35, "End", "End", ""),
     "Space":      (32, " ", "Space", " "),
 }
-MODS = {"ctrl": 2, "alt": 1, "shift": 8, "meta": 4, "cmd": 4}
+MODS = {"ctrl": 2, "control": 2, "alt": 1, "option": 1, "opt": 1,
+        "shift": 8, "meta": 4, "cmd": 4, "command": 4, "super": 4, "win": 4}
+
+IS_MAC = sys.platform == "darwin"
+
+# On macOS select-all / copy / paste are Cmd, not Ctrl. The model picks the key
+# name and will write ctrl+a on any platform; that dispatches cleanly and then
+# silently does nothing, which is the worst kind of failure. Rewrite it here, on
+# the execution path, rather than hoping the prompt covers it.
+def _mod_bits(names: list[str]) -> int:
+    bits = 0
+    for n in names:
+        n = n.strip().lower()
+        if IS_MAC and n in ("ctrl", "control"):
+            n = "meta"
+        bits |= MODS.get(n, 0)
+    return bits
+
+
+# ...and rewriting the modifier is not enough on its own. Cmd-shortcuts are
+# handled by the browser's editing layer, which a raw Input.dispatchKeyEvent
+# never reaches: Cmd+A arrives at the renderer as a keydown nobody acts on.
+# CDP's `commands` field (macOS only) is the way through.
+MAC_EDIT_COMMANDS = {
+    "a": ["selectAll"], "c": ["copy"], "v": ["paste"], "x": ["cut"],
+    "z": ["undo"], "y": ["redo"],
+}
 
 # Models naturally write "Right" / "Up" / "Esc". Without these aliases those keys
 # were silently dropped -- a whole keyboard-driven task ran while sending zero
@@ -220,9 +247,12 @@ class Actions:
     async def _key(self, key: str) -> bool:
         parts = [p.strip() for p in key.split("+")]
         base = normalise_key(parts[-1])
-        mods = 0
-        for m in parts[:-1]:
-            mods |= MODS.get(m.lower(), 0)
+        mods = _mod_bits(parts[:-1])
+        commands: list[str] = []
+        if IS_MAC and (mods & MODS["meta"]) and len(base) == 1:
+            commands = MAC_EDIT_COMMANDS.get(base.lower(), [])
+            if commands == ["undo"] and (mods & MODS["shift"]):
+                commands = ["redo"]          # Cmd+Shift+Z is redo on macOS
         if base in KEYS:
             vk, keyname, code, text = KEYS[base]
         elif len(base) == 1:
@@ -230,10 +260,12 @@ class Actions:
         else:
             return False
         for t in ("keyDown", "keyUp"):
-            p = {"type": t, "windowsVirtualKeyCode": vk, "key": keyname,
-                 "code": code, "modifiers": mods}
+            p = {"type": t, "windowsVirtualKeyCode": vk, "nativeVirtualKeyCode": vk,
+                 "key": keyname, "code": code, "modifiers": mods}
             if t == "keyDown" and text and not mods:
                 p["text"] = text
+            if t == "keyDown" and commands:
+                p["commands"] = commands
             await self.cdp.page("Input.dispatchKeyEvent", p, timeout=10)
             await asyncio.sleep(0.02)
         return True

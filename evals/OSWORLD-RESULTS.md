@@ -1,6 +1,6 @@
 # OSWorld browser tasks -- run report
 
-_Generated 2026-08-18 13:15 by `evals/osworld_run.py`._
+_Generated 2026-08-19 11:42 by `evals/osworld_run.py`._
 
 Ten login-free browser tasks taken verbatim from the public OSWorld task set (instruction text, start URL and task id all unchanged). Why these and not OSWorld 2.0's own 108: that set is gated on Hugging Face, runs against mocked self-hosted websites, needs a self-hosted GitLab token, and most of its tasks span desktop applications inside a VM -- none of it reachable from a browser agent on the live internet. See `evals/osworld_tasks.py` for the full note.
 
@@ -10,11 +10,13 @@ Each task was asked the way a user asks: typed into the chat panel inside Chrome
 
 | tasks | wall | tool calls | input tokens | cached | output | cost |
 |---|---|---|---|---|---|---|
-| 10 | 626s | 176 | 8,046,936 | 6,402,229 (80%) | 17,184 | **$4.7761** |
+| 10 | 636s | 174 | 7,942,931 | 6,315,581 (80%) | 16,626 | **$4.7173** |
 
-**5 done, 2 partial, 3 failed** of 10 graded. Grading is by reading the answer against the page, not by string match; the reasoning for each is under its task below.
+Not one sitting: the store accumulates, so these rows come from more than one machine. **Windows 11 (original run)** ran #1, #2, #3, #5, #7, #9; **macOS 26.1 (arm64)** ran #4, #6, #8, #10.
 
-Median task: **$0.0796**. The mean is not the story here — one task (#2) cost $3.68, more than the other nine put together. See *Where the money went*.
+**6 done, 1 partial, 3 failed** of 10 graded. Grading is by reading the answer against the page, not by string match; the reasoning for each is under its task below.
+
+Median task: **$0.0571**. The mean is not the story here — one task (#2) cost $3.68, more than the other nine put together. See *Where the money went*.
 
 ## Per task
 
@@ -23,13 +25,13 @@ Median task: **$0.0796**. The mean is not the story here — one task (#2) cost 
 | 1 | rentalcars.com | **failed** | 120 | 40 | 573,973 | 486,383 | 2,671 | $0.3045 |
 | 2 | budget.com | **failed** | 152 | 40 | 6,116,990 | 4,782,701 | 4,674 | $3.6812 |
 | 3 | tripadvisor.com | done | 76 | 27 | 396,764 | 344,243 | 1,992 | $0.1978 |
-| 4 | cars.com | done | 54 | 11 | 186,269 | 159,833 | 2,191 | $0.1111 |
+| 4 | cars.com | done | 32 | 5 | 52,134 | 40,340 | 1,322 | $0.0475 |
 | 5 | mbta.com | done | 120 | 34 | 460,130 | 407,740 | 1,904 | $0.2092 |
-| 6 | flightaware.com | done | 20 | 7 | 76,751 | 63,567 | 371 | $0.0435 |
+| 6 | flightaware.com | done | 36 | 11 | 113,435 | 98,607 | 644 | $0.0571 |
 | 7 | store.steampowered.com | partial | 17 | 6 | 59,064 | 48,421 | 372 | $0.0354 |
-| 8 | recreation.gov | done | 23 | 7 | 92,923 | 75,235 | 558 | $0.0571 |
+| 8 | recreation.gov | done | 34 | 7 | 92,922 | 75,209 | 478 | $0.0562 |
 | 9 | apple.com | **failed** | 26 | 0 | 27,475 | 0 | 2,055 | $0.0796 |
-| 10 | nfl.com | partial | 17 | 4 | 56,597 | 34,106 | 396 | $0.0566 |
+| 10 | nfl.com | done | 23 | 4 | 50,044 | 31,937 | 514 | $0.0488 |
 
 ## The chat and the mouse, while all this was happening
 
@@ -40,16 +42,16 @@ Sampled once a second for the whole of every task: is the panel still mounted on
 | 1 | 119 | 1 | 1 | 15 cursor journeys, avg 404px in 185ms |
 | 2 | 143 | 1 | 1 | 3 cursor journeys, avg 717px in 430ms |
 | 3 | 74 | 2 | 2 | 2 cursor journeys, avg 186px in 171ms |
-| 4 | 52 | 2 | 1 | 2 cursor journeys, avg 513px in 247ms |
+| 4 | 26 | 2 | 1 | no clicks |
 | 5 | 119 | 1 | 1 | 14 cursor journeys, avg 137px in 49ms |
-| 6 | 20 | 2 | 2 | 1 cursor journeys, avg 829px in 772ms |
+| 6 | 30 | 1 | 1 | 2 cursor journeys, avg 830px in 559ms |
 | 7 | 17 | 1 | 1 | 2 cursor journeys, avg 219px in 30ms |
-| 8 | not counted | 0 | 0 | 3 cursor journeys, avg 401px in 235ms |
+| 8 | 28 | 1 | 1 | 3 cursor journeys, avg 452px in 439ms |
 | 9 | not counted | 0 | 0 | no clicks |
-| 10 | 16 | 1 | 0 | no clicks |
-| **all** | **560** | **11** | **9** | |
+| 10 | 16 | 1 | 1 | no clicks |
+| **all** | **572** | **11** | **10** | |
 
-The panel was missing from 11 of 560 counted samples and the cursor from 9 (two rows predate the sample counter and recorded no misses at all). Every one of those is a single sample landing in the middle of a page load, before document-start script has a body to mount into; the following sample always has it back. For comparison, the same measurement before this session's fixes: **75 of 118 samples on one task**, with the panel gone for the rest of the run once it went.
+The panel was missing from 11 of 572 counted samples and the cursor from 10 (two rows predate the sample counter and recorded no misses at all). Every one of those is a single sample landing in the middle of a page load, before document-start script has a body to mount into; the following sample always has it back. For comparison, the same measurement before this session's fixes: **75 of 118 samples on one task**, with the panel gone for the rest of the run once it went.
 
 ## What each run did
 
@@ -121,39 +123,30 @@ Panel and mouse: panel MISSING in 2/74 samples; cursor MISSING in 2/74; 2 cursor
 *Hard because:* three filters that interact: fuel type, price cap, radius from a zip  
 *A correct answer contains:* a filtered listing page (EV, <=$50k, 50 mi of 10001) and what it found
 
-**54s · 11 tools · $0.1111**
+**32s · 5 tools · $0.0475**
 
-`navigatex2  snapshotx4  run_jsx3  clickx2`
+`navigatex2  snapshotx2  run_jsx1`
 
 Answer:
 
-> I found these **fully electric** listings priced below **$50,000** within **50 miles of ZIP 10001**:
+> I found these EV listings **within 50 miles of ZIP 10001** and **priced under $50,000** on Cars.com:
 > 
-> | Vehicle | Price | Mileage | Seller location / distance |
+> | Vehicle | Price | Mileage | Dealer / location |
 > |---|---:|---:|---|
-> | 2021 Tesla Model Y Long Range AWD | $31,294 | 31,346 mi | Wall Township, NJ — 38 mi |
-> | 2023 Tesla Model Y Long Range | $30,593 | 49,308 mi | Robbinsville Twp, NJ — 48 mi |
-> | 2024 Tesla Model Y Performance AWD | $36,294 | 40,398 mi | Wall Township, NJ — 38 mi |
-> | 2024 Tesla Model Y Long Range RWD | $36,475 | 22,500 mi | Ramsey, NJ — 23 mi |
-> | 2023 Tesla Model Y Long Range | $35,998 | 13,950 mi | Edison, NJ — 26 mi |
-> | 2021 Tesla Model 3 Standard Range Plus | $27,900 | 9,399 mi | Manasquan, NJ — 43 mi |
-> | 2023 Tesla Model Y Long Range AWD | $28,447 | 69,253 mi | Westfield, NJ — 20 mi |
-> | 2021 Tesla Model 3 Performance | $30,811 | 22,786 mi | North Plainfield, NJ — 26 mi |
-> | 2024 Cadillac LYRIQ Tech | $35,175 | 23,273 mi | Rockville Centre, NY — 15 mi |
-> | 2024 Acura ZDX Type S | $40,049 | 10,879 mi | Ramsey, NJ — 28 mi |
-> | 2022 Ford Mustang Mach‑E GT | $32,673 | 31,822 mi | Ramsey, NJ — 28 mi |
-> | 2023 Polestar 2 Long Range Dual Motor Performance Plus | $30,889 | 15,833 mi | East Hanover, NJ — 25 mi |
+> | [2022 Ford Mustang Mach‑E GT](https://www.cars.com/vehicledetail/693fe74a-8079-4f3d-bb84-a831f1053b0d/) | **$23,294** | 90,545 mi | Automotive Avenues — Wall Township, NJ (**38 mi**) |
+> | [2024 Honda Prologue Elite](https://www.cars.com/vehicledetail/30281bd0-b2bd-42e2-bd35-43304576daaa/) | **$30,023** | 26,395 mi | Honda Universe — Lakewood Township, NJ (**47 mi**) |
+> | [2024 Acura ZDX Type S](https://www.cars.com/vehicledetail/acc30dec-36ab-4ae1-8811-4a2ec7106ec8/) | **$40,049** | 10,879 mi | BMW of Ramsey — Ramsey, NJ (**23 mi**) |
+> | [2024 Tesla Model Y Long Range RWD](https://www.cars.com/vehicledetail/821a3035-e001-4410-8c27-4d2581f37969/) | **$36,475** | 22,500 mi | BMW of Ramsey — Ramsey, NJ (**23 mi**) |
+> | [2020 Tesla Model Y Long Range AWD](https://www.cars.com/vehicledetail/d43c3f47-ecd9-495b-9310-e451e5eb802a/) | **$27,794** | 44,501 mi | Automotive Avenues — Wall Township, NJ (**38 mi**) |
+> | [2024 Tesla Model Y Long Range AWD](https://www.cars.com/vehicledetail/5c96a484-dcd6-4b15-892a-162f20f766f5/) | **$34,158** | 45,698 mi | Sansone Rt 1 Auto Mall — Avenel, NJ (**19 mi**) |
+> | [2022 Tesla Model 3 Performance](https://www.cars.com/vehicledetail/310f4cd2-2e5b-42d9-95a2-9478135c58b0/) | **$30,398** | 58,540 mi | Mini of Ramsey — Ramsey, NJ (**23 mi**) |
+> | [New 2026 Honda Prologue EX](https://www.cars.com/vehicledetail/2df59da7-3977-4332-80d0-2f77e1af6d61/) | **$42,323** | New | Honda of Manhasset — Manhasset, NY (**16 mi**) |
 > 
-> **Standouts:**  
-> - **Lowest-mileage option:** 2021 Tesla Model 3 Standard Range Plus — 9,399 miles, $27,900.  
-> - **Best newer crossover choices:** 2024 Tesla Model Y Long Range RWD, Cadillac LYRIQ Tech, and Acura ZDX Type S.  
-> - **Performance-oriented:** Tesla Model Y Performance, Model 3 Performance, Mustang Mach‑E GT, Polestar 2 Performance.  
-> 
-> These are live dealer listings, so confirm availability, final out-the-door price, accident history, battery condition, and eligibility for any used-EV tax credit before visiting. Cars.com’s current local electric-vehicle listings support the New York-area inventory search.
+> The lowest-price option shown was the **2022 Mustang Mach‑E GT at $23,294**, though it has relatively high mileage. The lowest-mileage used option shown was the **2024 Acura ZDX Type S**, with 10,879 miles at $40,049. Listing availability and prices can change quickly.
 
-**Done.** Applied all three filters and came back with real listings, prices, mileage and seller distances -- every one inside 50 miles of 10001 and under $50k.
+**Done.** Applied all three filters as URL state (fuel_slugs[]=electric, list_price_max=50000, zip=10001, maximum_distance=50) and read twelve listings off the filtered page with prices, mileage, distance and per-listing links. Same result as the Windows run in 5 tool calls instead of 11.
 
-Panel and mouse: panel MISSING in 2/52 samples; cursor MISSING in 1/52; 2 cursor journeys, avg 513px in 247ms. Question kept in chat: yes. Typed exactly: yes. Panel alive at the end: yes.
+Panel and mouse: panel MISSING in 2/26 samples; cursor MISSING in 1/26; no clicks (nothing to move to). Question kept in chat: yes. Typed exactly: yes. Panel alive at the end: yes.
 
 ### 5. mbta.com -- `da46d875-6b82-4681-9284-653b0c7ae241`
 
@@ -189,17 +182,17 @@ Panel and mouse: panel MISSING in 1/119 samples; cursor MISSING in 1/119; 14 cur
 *Hard because:* navigation into a nested forum, then a comparison across a list  
 *A correct answer contains:* the General category opened and the highest-reply topic named
 
-**20s · 7 tools · $0.0435**
+**36s · 11 tools · $0.0571**
 
-`navigatex2  snapshotx3  clickx1  run_jsx1`
+`navigatex3  snapshotx5  clickx2  run_jsx1`
 
 Answer:
 
-> Opened **“The Banter Thread”** in **FlightAware > General**. It has **5,518 replies** (5,519 posts total), the most in the category.
+> Opened **FlightAware > General > “The Banter Thread.”** It is the all-time top topic in the category, with **5,518 replies** (**5,519 posts** total).
 
-**Done.** Into the nested category, compared the list, opened the right topic and quoted the reply count (5,518).
+**Done.** Into the nested category and opened the right topic: 'The Banter Thread', 5,518 replies (5,519 posts). Identical to the Windows run, which is the point -- same answer, different OS.
 
-Panel and mouse: panel MISSING in 2/20 samples; cursor MISSING in 2/20; 1 cursor journeys, avg 829px in 772ms. Question kept in chat: yes. Typed exactly: yes. Panel alive at the end: yes.
+Panel and mouse: panel MISSING in 1/30 samples; cursor MISSING in 1/30; 2 cursor journeys, avg 830px in 559ms. Question kept in chat: yes. Typed exactly: yes. Panel alive at the end: yes.
 
 ### 7. store.steampowered.com -- `121ba48f-9e17-48ce-9bc6-a4fb17a7ebba`
 
@@ -231,21 +224,17 @@ Panel and mouse: panel MISSING in 1/17 samples; cursor MISSING in 1/17; 2 cursor
 *Hard because:* ambiguous target ('Diamond' is several campgrounds) plus an availability grid  
 *A correct answer contains:* the Diamond campground page and its next available date(s)
 
-**23s · 7 tools · $0.0571**
+**34s · 7 tools · $0.0562**
 
 `snapshotx4  fillx1  clickx2`
 
 Answer:
 
-> For **Diamond Campground near Spanish Fork, Utah**, the next reservable availability begins **Saturday, August 22, 2026**.
-> 
-> - **August 18–21:** marked **First-come, first-served** for most sites (not reservable online).
-> - **August 22–27:** marked **Available** across the displayed family sites, including A007, A009, A010, A017, A018, A020, A022 and multiple B-loop sites.
-> - Site **B057** is reserved on August 18, then first-come, first-served through August 21, and available from August 22.
+> The next reservable availability at **Diamond Campground near Spanish Fork, Utah** begins **Sunday, August 23, 2026**. The calendar shows widespread availability from **August 23 through at least September 1, 2026**.
 
-**Done.** Disambiguated 'Diamond' to Diamond Campground near Spanish Fork, Utah, read the availability grid and gave the next reservable date (22 Aug 2026) with the site numbers behind it.
+**Done.** Disambiguated 'Diamond' to Diamond Campground near Spanish Fork, Utah and gave the next reservable date, 23 Aug 2026, with the window it stays available. The Windows run said 22 Aug; it ran a day earlier, so this is the same grid read a day later, not a disagreement.
 
-Panel and mouse: panel up; cursor up; 3 cursor journeys, avg 401px in 235ms. Question kept in chat: yes. Typed exactly: yes. Panel alive at the end: yes.
+Panel and mouse: panel MISSING in 1/28 samples; cursor MISSING in 1/28; 3 cursor journeys, avg 452px in 439ms. Question kept in chat: yes. Typed exactly: yes. Panel alive at the end: yes.
 
 ### 9. apple.com -- `f5d96daf-83a8-4c86-9686-bada31fc66ab`
 
@@ -294,19 +283,22 @@ Panel and mouse: panel up; cursor up; no clicks (nothing to move to). Question k
 *Hard because:* a fact buried in a stats section, with an off-by-one-year trap  
 *A correct answer contains:* Super Bowl LIV, Chiefs 31 - 49ers 20, sourced from nfl.com
 
-**17s · 4 tools · $0.0566**
+**23s · 4 tools · $0.0488**
 
 `navigatex2  snapshotx2`
 
 Answer:
 
-> For the **2019 NFL season’s Super Bowl**—**Super Bowl LIV**, played on **February 2, 2020**—the **Kansas City Chiefs beat the San Francisco 49ers, 31–20**.
+> On the NFL’s official Super Bowl LIV recap, the **Kansas City Chiefs defeated the San Francisco 49ers, 31–20**.
 > 
-> Note: the NFL page I opened was for **Super Bowl LIII**, played February 3, 2019, where the **New England Patriots beat the Los Angeles Rams 13–3**.
+> - **2019 NFL season championship game**
+> - **Played:** February 2, 2020
+> - **Winner:** Kansas City Chiefs
+> - **Final score:** Chiefs 31, 49ers 20
 
-**Partly.** Right answer (Super Bowl LIV, Chiefs 31-20 49ers) and unusually honest about provenance: it said outright that the nfl.com page it opened was Super Bowl LIII. So the fact is correct but was not the one verified on the page, which is half the task.
+**Done.** Better than the Windows run, which got the fact right but admitted the page it opened was Super Bowl LIII. This one actually navigated to nfl.com/games/49ers-at-chiefs-2020-post-5 -- the LIV recap itself -- and sourced Chiefs 31-20 49ers from it. The off-by-one-year trap the task is built around was avoided on the page, not just in the answer.
 
-Panel and mouse: panel MISSING in 1/16 samples; cursor up; no clicks (nothing to move to). Question kept in chat: yes. Typed exactly: yes. Panel alive at the end: yes.
+Panel and mouse: panel MISSING in 1/16 samples; cursor MISSING in 1/16; no clicks (nothing to move to). Question kept in chat: yes. Typed exactly: yes. Panel alive at the end: yes.
 
 ## Where the money went
 

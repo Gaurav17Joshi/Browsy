@@ -14,12 +14,18 @@ step: **a11y refs** (default), **code** (`run_js`), **vision** (`screenshot`).
 
 ## Setup
 
-Python 3.12, Chrome, and an OpenAI key.
+Python 3.12+, Chrome, and an OpenAI key. Windows 11 and macOS (Apple silicon)
+are both supported from this branch.
 
 ```bash
 python -m venv .venv
-.venv/Scripts/python -m pip install openai-agents websockets httpx
+.venv/Scripts/python -m pip install -r requirements.txt      # Windows
+.venv/bin/python     -m pip install -r requirements.txt      # macOS / Linux
 ```
+
+Or let the launcher do it: `.\run.ps1` on Windows, `./run.sh` on macOS/Linux,
+each creates the venv on first use. Everything below is spelled
+`.venv/Scripts/python` for Windows; on macOS/Linux it is `.venv/bin/python`.
 
 The API key is **never copied into this repo** — only a path to it is configured.
 Set `CUAEXP_KEYFILE` to point at it, or place it at `~/.cuaexp/key`.
@@ -29,7 +35,7 @@ The loader accepts either `OPENAI_API_KEY=sk-...` or a file containing just the 
 
 ```bash
 # interactive: Chrome opens with the chat panel floating over the page
-.venv/Scripts/python daemon.py --start google.com
+.venv/Scripts/python daemon.py --start google.com     # ./run.sh --start google.com
 
 # one-shot task, full logs
 .venv/Scripts/python run_task.py "find the cheapest flight to Tokyo in March"
@@ -199,13 +205,14 @@ Cost: **~0.9 s per click, zero extra tokens.** Nothing is sent to the model.
 .venv/Scripts/python tests/panel_check.py --headless
 ```
 
-88 checks against a real panel in a real Chrome, driven with synthesized input:
+89 checks against a real panel in a real Chrome, driven with synthesized input:
 folding and unfolding, hover-to-point (and that the finger actually lands on the
 button), drag and release, a deliberately lost mouseup, every resize edge,
 typing with spaces, what the page underneath sees, wheel routing, minimise, off-screen
 rescue, re-mount across navigation, a stale script from a dead daemon, Trusted
-Types, focus theft, the Bezier path of the virtual mouse, and killing the CDP socket to watch
-it reconnect. Uses port 9333 and its own profile, so it never disturbs a running
+Types, focus theft, select-all-then-type (the one place macOS needs Cmd where
+Windows needs Ctrl), the Bezier path of the virtual mouse, and killing the CDP
+socket to watch it reconnect. Uses port 9333 and its own profile, so it never disturbs a running
 daemon. Run it after touching `panel.py`, `cursor.py` or `cdp.py` — every panel
 bug so far has been an interaction bug, invisible when reading the code.
 

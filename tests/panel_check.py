@@ -23,7 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from cuaexp.cdp import CDPError                     # noqa: E402
-from cuaexp.config import PROJECT_ROOT              # noqa: E402
+from cuaexp.config import PROJECT_ROOT, VIEWPORT    # noqa: E402
 from cuaexp.panel import Panel                      # noqa: E402
 from cuaexp.recorder import Recorder                # noqa: E402
 from cuaexp.session import BrowserSession           # noqa: E402
@@ -110,6 +110,28 @@ class MiniDaemon:
 
 
 # --------------------------------------------------------------------- input
+async def pin_viewport(cdp) -> None:
+    """Force the layout viewport to VIEWPORT, whatever the real window got.
+
+    Half these checks assert on pixels -- a drag of 200px, a resize of 55px --
+    and a panel that is deliberately kept inside the viewport clamps against its
+    edges. So the viewport has to be the same number every run. It is not:
+    Chrome is asked for a 1440x1020 window, headless gives exactly that, and on
+    macOS the window manager clamps it to the screen work area (a 1440x900
+    display yields a 717px viewport). Three checks failed that way on a Mac and
+    passed headless on the same machine, which is the least useful kind of
+    failure. Overriding the metrics costs nothing headless and makes the visible
+    run mean the same thing.
+
+    Must be re-applied after Emulation.clearDeviceMetricsOverride and after the
+    CDP session reattaches, because both drop it.
+    """
+    w, h = VIEWPORT
+    await cdp.page("Emulation.setDeviceMetricsOverride",
+                   {"width": w, "height": h, "deviceScaleFactor": 0,
+                    "mobile": False})
+
+
 class Input:
     def __init__(self, cdp):
         self.cdp = cdp
@@ -302,6 +324,8 @@ async def main() -> int:
     try:
         await sess.start()
         cdp = sess.cdp
+        await pin_viewport(cdp)
+        sess.on_reattach.append(lambda: pin_viewport(sess.cdp))
         inp = Input(cdp)
         mini.panel = Panel(cdp, mini.on_message)
         await mini.panel.install()
@@ -716,7 +740,7 @@ async def main() -> int:
         R.add("panel is not larger than the window",
               small["w"] <= 700 and small["h"] <= 520,
               f"{small['w']:.0f}x{small['h']:.0f}")
-        await cdp.page("Emulation.clearDeviceMetricsOverride", {})
+        await pin_viewport(cdp)          # back to the pinned size, not the real one
         await asyncio.sleep(0.6)
         # And it must still be usable after the window grows back -- the input
         # box hanging off the right edge is what made the chat untypeable.
@@ -806,9 +830,30 @@ async def main() -> int:
         await sess.act.navigate(PROBE)
         await open_chat(cdp, inp)
         snap = (await sess.per.capture()).render()
+        # Skip the URL/TITLE header: the checkout directory is itself called
+        # Browsy, so a file:// fixture URL contains the word without anything
+        # having leaked. Only what we perceived *of the page* is under test.
+        body = "\n".join(l for l in snap.splitlines()
+                         if not l.startswith(("URL:", "TITLE:")))
         leaked = [w for w in ("Ask Browsy", "Browsy", "New context", "Send")
-                  if w in snap]
+                  if w in body]
         R.add("the agent cannot see its own panel", not leaked, ", ".join(leaked))
+
+        # ------------------------------------------------ 14b. select-all
+        # The model writes "ctrl+a" whatever the platform. On macOS that is a
+        # no-op that dispatches cleanly, so the only way to know the rewrite to
+        # Cmd is working is to type over a selection and see it replaced rather
+        # than appended.
+        print("\n-- select-all replaces rather than appends")
+        await cdp.eval_js(
+            "(() => { const e = document.getElementById('pageinput');"
+            " e.focus(); e.value = 'first'; })()")
+        await sess.act._key("ctrl+a")
+        await cdp.page("Input.insertText", {"text": "second"})
+        await asyncio.sleep(0.15)
+        val = await cdp.eval_js("document.getElementById('pageinput').value")
+        R.add("ctrl+a selects all so typing replaces the field", val == "second",
+              f"field holds {val!r}")
 
         # ------------------------------------------------ 15. socket endurance
         print(f"\n-- {args.soak}s of page churn")
