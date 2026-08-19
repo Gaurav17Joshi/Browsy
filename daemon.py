@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import base64
+import json
 import logging
 import sys
 import time
@@ -26,6 +27,10 @@ logging.basicConfig(level=logging.INFO,
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("openai").setLevel(logging.WARNING)
 log = logging.getLogger("cuaexp.daemon")
+
+# Where the panel's sign-in button goes. The user logs in by hand here; the
+# cookie then lives in the Chrome profile and persists across runs.
+LOGIN_URL = "https://accounts.google.com/signin"
 
 
 class Daemon:
@@ -59,7 +64,7 @@ class Daemon:
         # sits there empty until the task ends -- which looks exactly like the
         # chat having vanished. These are cheap and idempotent, so answer them
         # out of band, immediately.
-        if kind in ("ready", "ui"):
+        if kind in ("ready", "ui", "login"):
             return asyncio.create_task(self._handle_now(msg))
 
         return asyncio.create_task(self.queue.put(msg))
@@ -76,6 +81,14 @@ class Daemon:
             elif msg.get("type") == "ui":
                 self.ui = msg.get("ui") or {}
                 self.panel.update_seed(ui=self.ui)
+            elif msg.get("type") == "login":
+                # The user pressed the sign-in button. Drive the browser there
+                # ourselves rather than asking the agent to: no credential ever
+                # reaches the model, and it costs no tokens. Out of band on
+                # purpose -- if a turn is running, the button must still work.
+                await self.sess.cdp.page("Page.navigate", {"url": LOGIN_URL})
+                await self.push({"type": "tool", "name": "navigate",
+                                 "args": json.dumps({"url": LOGIN_URL})})
         except Exception:
             log.exception("out-of-band panel message failed")
 

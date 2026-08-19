@@ -269,6 +269,8 @@ textarea::placeholder { color: #626b76 }
 .btn { border: none; border-radius: 10px; cursor: pointer; height: 42px; flex: 0 0 auto }
 .clip { width: 38px; background: #1f242c; border: 1px solid #2d333d; color: #8b95a1; font-size: 16px }
 .clip:hover { color: #e7eaee; border-color: #3b434f }
+.lgn { color: #b8a24a }
+.lgn:hover { color: #f0d264; border-color: #4b4530 }
 .snd { background: linear-gradient(180deg,#2f6df5,#2559d8); color: #fff; font-weight: 650;
        padding: 0 16px; font-size: 13px }
 .snd:hover { filter: brightness(1.08) }
@@ -593,6 +595,7 @@ PANEL_JS = r"""
           '<div class="ft">' +
             '<div class="files" id="files"></div>' +
             '<div class="row">' +
+              '<button class="btn clip lgn" id="login" title="Sign in to Google -- opens the sign-in page so you can log in yourself">&#128273;</button>' +
               '<button class="btn clip" id="clip" title="Attach files">&#128206;</button>' +
               '<textarea id="in" placeholder="Ask Browsy to do something..."></textarea>' +
               '<button class="btn snd" id="go">Send</button>' +
@@ -645,7 +648,10 @@ PANEL_JS = r"""
       ui.h   = Math.min(Math.max(220, ui.h || 540), maxH);
       ui.inH = Math.min(Math.max(42, ui.inH || 42), Math.max(42, ui.h - 150));
       if (ui.left == null) ui.left = Math.max(8, innerWidth - BOTW - 24);
-      if (ui.top == null)  ui.top  = Math.max(8, innerHeight - BOTH - 24);
+      // Not jammed against the bottom edge: he rests at 70% of the window
+      // height, which leaves room below him and puts him nearer eye level.
+      if (ui.top == null)  ui.top  = Math.max(8, Math.min(Math.round(innerHeight * 0.70),
+                                                          innerHeight - BOTH - 12));
       ui.left = Math.min(Math.max(0, ui.left), Math.max(0, innerWidth - BOTW));
       ui.top  = Math.min(Math.max(0, ui.top),  Math.max(0, innerHeight - BOTH));
     };
@@ -881,6 +887,11 @@ PANEL_JS = r"""
       drawFiles();
     };
     $('clip').onclick = () => $('picker').click();
+    // Opens the Google sign-in page so the user can log in with their own hands.
+    // Deliberately does NOT hand anything to the agent: the model never sees a
+    // credential. It finds out where the browser ended up from the location line
+    // prefixed to the next user turn.
+    $('login').onclick = () => send({type: 'login'});
     $('picker').onchange = e => { take(e.target.files); e.target.value = ''; };
     ['dragenter', 'dragover'].forEach(ev => pnl.addEventListener(ev, e => {
       e.preventDefault(); pnl.classList.add('over'); }));

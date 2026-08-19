@@ -36,6 +36,12 @@ HOW TO SEE THE PAGE
 - Refs expire. If a ref is rejected as stale, snapshot again -- never guess a ref.
 - `screenshot()` costs far more than a snapshot. Use it only when the snapshot is
   genuinely insufficient: canvas apps, dense grids, or a visual layout question.
+- THE USER DRIVES THIS BROWSER TOO. Between your turns they may have signed in,
+  switched tab, or navigated. Every user message is prefixed with where the
+  browser actually is right now. If that does not match the page your last
+  snapshot described, your snapshot is stale: call `snapshot()` before you answer
+  or conclude anything about the page. Never tell the user to do something they
+  may already have done.
 
 HOW TO ACT
 - `click(ref)`, `fill(ref, text, submit=True)`, `press(key)`, `scroll()`,
@@ -197,6 +203,19 @@ class BrowserAgent:
         self.history = []
         self.rec.log("context_reset", {})
 
+    async def _where(self) -> str:
+        """A one-line "the browser is here" prefix for a user turn."""
+        try:
+            info = await self.sess.cdp.eval_js(
+                "({u: location.href, t: document.title})")
+            url, title = info.get("u", ""), (info.get("t") or "").strip()
+        except Exception:
+            return ""
+        if not url or url == "about:blank":
+            return ""
+        suffix = f' -- "{title[:120]}"]' if title else "]"
+        return f"[the browser is now at {url[:300]}" + suffix + "\n"
+
     @staticmethod
     def _user_item(message: str, attachments: list[dict] | None) -> dict:
         """Build a user turn, inlining any attached images / PDFs / text files."""
@@ -229,7 +248,14 @@ class BrowserAgent:
             note += "  [attached: " + ", ".join(a.get("name", "?") for a in attachments) + "]"
         self.rec.user(note)
         self.rec.begin_turn(note)
-        turn_input = self.history + [self._user_item(message, attachments)]
+        # Where the browser is *now*, not where the last snapshot left it. Without
+        # this the model reasons from a snapshot taken before the user touched the
+        # browser -- it told a user who had just signed in to Gmail to go and sign
+        # in, because the only page it could see was the sign-in form it had
+        # loaded a turn earlier. Cheap (a few tokens) and it sits at the end of
+        # the prefix, so prompt caching is unaffected.
+        turn_input = self.history + [self._user_item(await self._where() + message,
+                                                     attachments)]
         result = Runner.run_streamed(self.agent, turn_input, max_turns=MAX_TURNS)
 
         hit_limit = False
