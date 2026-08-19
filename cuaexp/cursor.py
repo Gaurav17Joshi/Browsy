@@ -31,6 +31,14 @@ CURSOR_JS = r"""
   // Same build check as the panel: a Chrome we reuse can still be carrying a
   // cursor script registered by a daemon that has since exited, and that copy
   // runs first. Newer build wins and replaces the older one's element.
+  // Only the top-level document gets a cursor. addScriptToEvaluateOnNewDocument
+  // runs in EVERY frame, and window.__cuaexpBuild is per-window, so the build
+  // guard below cannot see across frames: on an iframe-heavy page (Google's
+  // account pages embed full-size ones) each frame mounted its own copy and the
+  // user saw a second cursor. Comparing window to window.top
+  // is safe cross-origin -- it is a reference check, not a property read.
+  try { if (window.top !== window.self) return; } catch (e) { return; }
+
   const BUILD = __CUAEXP_BUILD__;
   if (window.__cuaexpCursorBuild >= BUILD) return;
   const replacing = window.__cuaexpCursorBuild !== undefined;

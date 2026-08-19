@@ -271,6 +271,17 @@ textarea::placeholder { color: #626b76 }
 .clip:hover { color: #e7eaee; border-color: #3b434f }
 .lgn { color: #b8a24a }
 .lgn:hover { color: #f0d264; border-color: #4b4530 }
+.lwrap { position: relative; display: flex }
+.lmenu { position: absolute; bottom: 46px; left: 0; min-width: 186px; z-index: 9;
+         background: #1b2028; border: 1px solid #313945; border-radius: 8px;
+         padding: 4px; box-shadow: 0 10px 26px rgba(0,0,0,.5);
+         display: none; flex-direction: column; gap: 2px }
+.lmenu.on { display: flex }
+.lmenu button { all: unset; padding: 7px 10px; border-radius: 5px; cursor: pointer;
+                font: 12px/1.3 system-ui, sans-serif; color: #d6dbe2; white-space: nowrap }
+.lmenu button:hover { background: #262d37 }
+.lmenu button.danger { color: #e08585 }
+.lmenu button.danger:hover { background: #3a2226; color: #ff9d9d }
 .snd { background: linear-gradient(180deg,#2f6df5,#2559d8); color: #fff; font-weight: 650;
        padding: 0 16px; font-size: 13px }
 .snd:hover { filter: brightness(1.08) }
@@ -488,6 +499,14 @@ PANEL_JS = r"""
   // no longer exists. Compare builds instead: an older panel is torn down and
   // replaced, a same-or-newer one is left alone, which also makes re-evaluating
   // this script inside a live page a no-op.
+  // Only the top-level document gets a panel. addScriptToEvaluateOnNewDocument
+  // runs in EVERY frame, and window.__cuaexpBuild is per-window, so the build
+  // guard below cannot see across frames: on an iframe-heavy page (Google's
+  // account pages embed full-size ones) each frame mounted its own copy and the
+  // user saw two Browsys, each with its own chat. Comparing window to window.top
+  // is safe cross-origin -- it is a reference check, not a property read.
+  try { if (window.top !== window.self) return; } catch (e) { return; }
+
   const BUILD = __CUAEXP_BUILD__;
   if (window.__cuaexpBuild >= BUILD) return;
   const replacing = window.__cuaexpBuild !== undefined;
@@ -595,7 +614,13 @@ PANEL_JS = r"""
           '<div class="ft">' +
             '<div class="files" id="files"></div>' +
             '<div class="row">' +
-              '<button class="btn clip lgn" id="login" title="Sign in to Google -- opens the sign-in page so you can log in yourself">&#128273;</button>' +
+              '<div class="lwrap">' +
+                '<button class="btn clip lgn" id="login" title="Accounts">&#128273;</button>' +
+                '<div class="lmenu" id="lmenu">' +
+                  '<button id="lin">Sign in to Google</button>' +
+                  '<button id="lout" class="danger">Sign out &amp; clear cookies</button>' +
+                '</div>' +
+              '</div>' +
               '<button class="btn clip" id="clip" title="Attach files">&#128206;</button>' +
               '<textarea id="in" placeholder="Ask Browsy to do something..."></textarea>' +
               '<button class="btn snd" id="go">Send</button>' +
@@ -887,11 +912,22 @@ PANEL_JS = r"""
       drawFiles();
     };
     $('clip').onclick = () => $('picker').click();
-    // Opens the Google sign-in page so the user can log in with their own hands.
-    // Deliberately does NOT hand anything to the agent: the model never sees a
-    // credential. It finds out where the browser ended up from the location line
-    // prefixed to the next user turn.
-    $('login').onclick = () => send({type: 'login'});
+    // Accounts menu. Neither action involves the agent: the model never sees a
+    // credential, and it learns where the browser ended up from the location
+    // line prefixed to the next user turn.
+    const lmenu = $('lmenu');
+    const closeMenu = () => lmenu.classList.remove('on');
+    $('login').onclick = (e) => { e.stopPropagation(); lmenu.classList.toggle('on'); };
+    $('lin').onclick  = () => { closeMenu(); send({type: 'login'}); };
+    $('lout').onclick = () => { closeMenu(); send({type: 'logout'}); };
+    // Dismiss on any click elsewhere in the panel, and on Escape. Capture phase
+    // for the same reason every other window listener here is: the host stops
+    // the bubble path, so a bubble-phase listener would never fire.
+    addEventListener('mousedown', (e) => {
+      if (!lmenu.classList.contains('on')) return;
+      if (!e.composedPath().includes(lmenu)) closeMenu();
+    }, true);
+    addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); }, true);
     $('picker').onchange = e => { take(e.target.files); e.target.value = ''; };
     ['dragenter', 'dragover'].forEach(ev => pnl.addEventListener(ev, e => {
       e.preventDefault(); pnl.classList.add('over'); }));

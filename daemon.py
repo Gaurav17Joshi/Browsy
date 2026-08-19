@@ -28,9 +28,12 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("openai").setLevel(logging.WARNING)
 log = logging.getLogger("cuaexp.daemon")
 
-# Where the panel's sign-in button goes. The user logs in by hand here; the
-# cookie then lives in the Chrome profile and persists across runs.
-LOGIN_URL = "https://accounts.google.com/signin"
+# Where the accounts menu goes. AddSession, not /signin: once a session already
+# exists Google bounces /signin straight to myaccount.google.com, which is not a
+# login page at all. AddSession shows the account picker either way, so "sign in"
+# still means sign in when you are already signed in as someone else.
+LOGIN_URL = "https://accounts.google.com/AddSession"
+LOGOUT_URL = "https://accounts.google.com/Logout"
 
 
 class Daemon:
@@ -82,15 +85,50 @@ class Daemon:
                 self.ui = msg.get("ui") or {}
                 self.panel.update_seed(ui=self.ui)
             elif msg.get("type") == "login":
-                # The user pressed the sign-in button. Drive the browser there
-                # ourselves rather than asking the agent to: no credential ever
-                # reaches the model, and it costs no tokens. Out of band on
-                # purpose -- if a turn is running, the button must still work.
+                # The user pressed sign in. Drive the browser there ourselves
+                # rather than asking the agent to: no credential ever reaches the
+                # model, and it costs no tokens. Out of band on purpose -- if a
+                # turn is running, the button must still work.
                 await self.sess.cdp.page("Page.navigate", {"url": LOGIN_URL})
                 await self.push({"type": "tool", "name": "navigate",
                                  "args": json.dumps({"url": LOGIN_URL})})
+            elif msg.get("type") == "logout":
+                await self._logout()
         except Exception:
             log.exception("out-of-band panel message failed")
+
+    async def _logout(self) -> None:
+        """Sign out and actually delete the stored session.
+
+        Two steps, in this order. Google's Logout endpoint first, so the session
+        is revoked server-side rather than merely forgotten here -- otherwise the
+        cookie we drop stays valid for anyone who has a copy. Then clear the
+        browser's cookie store, which is what empties
+        .chrome-profile/Default/Network/Cookies on disk.
+
+        Deliberately clears cookies for EVERY site, not just Google: a button
+        labelled "clear cookies" that quietly left other logins in place would be
+        worse than one that says what it does.
+        """
+        try:
+            await self.sess.cdp.page("Page.navigate", {"url": LOGOUT_URL})
+            await asyncio.sleep(2.0)          # let the revocation round-trip
+        except Exception:
+            log.warning("logout navigation failed; clearing cookies anyway")
+        # Network is a per-target domain, so it has to go down the page session;
+        # Storage.clearCookies is browser-level and catches contexts the page
+        # session cannot see.
+        await self.sess.cdp.page("Network.clearBrowserCookies")
+        try:
+            await self.sess.cdp.send("Storage.clearCookies")
+        except Exception:
+            pass
+        await self.sess.cdp.page("Page.navigate", {"url": "about:blank"})
+        self.rec.log("logout", {"scope": "all cookies"})
+        await self.push({"type": "assistant",
+                         "text": "Signed out. All cookies cleared from the "
+                                 "browser profile -- every site is logged out, "
+                                 "not just Google."})
 
     def _take_chunk(self, m: dict):
         buf = self.uploads.setdefault(
