@@ -58,10 +58,16 @@ branch.
 
 ### 2. The keyfile default -- ALREADY DONE
 
-`cuaexp/config.py` no longer hardcodes any machine path. `_find_keyfile()`
-resolves `$CUAEXP_KEYFILE` first, then falls back to `~/.cuaexp/key` and
-`~/.config/cuaexp/key`. Both defaults are correct on macOS, so there is nothing
-to change -- just put the key at `~/.cuaexp/key` or export the variable.
+`_find_keyfile()` in `cuaexp/config.py` resolves `$CUAEXP_KEYFILE` first, then
+`~/.cuaexp/key`, then `~/.config/cuaexp/key`. Both defaults are correct on
+macOS, so there is nothing to change -- just put the key at `~/.cuaexp/key` or
+export the variable.
+
+There is one further candidate appended only when `os.name == "nt"`: the
+absolute path the key sits at on the original Windows machine, so that box needs
+no setup. It is unreachable on macOS. Do not generalise it or add a Darwin
+equivalent -- the whole point is that no machine-specific path is on the shared
+code path.
 
 The OpenAI key deliberately lives **outside** the repo: only a path is
 configured, and the key is never copied in, logged or echoed. Preserve that
