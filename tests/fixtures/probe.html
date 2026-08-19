@@ -1,0 +1,27 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>cuaexp probe page</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; }
+  #tall { height: 4000px; background: linear-gradient(#eef4ff, #ffeef0); margin-top: 12px; }
+</style>
+<h1 id="title">probe page</h1>
+<p>A page that counts everything it is allowed to see, so a test can prove the
+   chat panel does not leak input into it.</p>
+<input id="pageinput" placeholder="page input">
+<button id="pagebutton">page button</button>
+<div id="tall">scrollable area</div>
+<script>
+  window.probe = {keydown: 0, keydownCapture: 0, keyup: 0, click: 0, mousedown: 0,
+                  mouseup: 0, mousemove: 0, wheel: 0, drop: 0, keys: []};
+  addEventListener('keydown', e => { probe.keydown++; probe.keys.push(e.key); });
+  document.addEventListener('keydown', () => probe.keydownCapture++, true);
+  addEventListener('keyup',     () => probe.keyup++);
+  addEventListener('click',     () => probe.click++);
+  addEventListener('mousedown', () => probe.mousedown++);
+  addEventListener('mouseup',   () => probe.mouseup++);
+  addEventListener('mousemove', () => probe.mousemove++);
+  addEventListener('wheel',     () => probe.wheel++);
+  addEventListener('drop',      () => probe.drop++);
+  window.resetProbe = () => { for (const k in probe) probe[k] = (k === 'keys' ? [] : 0); };
+</script>

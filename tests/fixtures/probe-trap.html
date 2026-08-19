@@ -1,0 +1,27 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>cuaexp probe (focus trap)</title>
+<style>
+  body { font-family: system-ui, sans-serif; padding: 20px }
+  #modal { border: 2px solid #c33; padding: 16px; width: 380px; }
+</style>
+<h1>focus trap</h1>
+<p>A modal that enforces focus the way Bootstrap's does: whenever focus lands
+   anywhere outside it, it takes it straight back. budget.com ships one of
+   these, and it swallowed every character typed into the chat panel.</p>
+<div id="modal" tabindex="-1">
+  <b>Special offer!</b>
+  <input id="trapinput" placeholder="the modal's own input">
+</div>
+<script>
+  window.probe = {keydown: 0, keys: [], grabs: 0};
+  addEventListener('keydown', e => { probe.keydown++; probe.keys.push(e.key); });
+  const modal = document.getElementById('modal');
+  document.addEventListener('focusin', e => {
+    if (modal !== e.target && !modal.contains(e.target)) {
+      probe.grabs++;
+      modal.focus();
+    }
+  });
+  modal.focus();
+</script>

@@ -1,0 +1,7 @@
+# Commit everything with LF, whatever the platform checks out.
+# The Windows machine has core.autocrlf=true system-wide; without this a Mac
+# clone would receive CRLF files.
+* text=auto eol=lf
+
+# Binary: never touch these.
+*.png binary

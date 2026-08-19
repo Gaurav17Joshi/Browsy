@@ -1,0 +1,23 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>cuaexp probe (focus thief)</title>
+<style>body { font-family: system-ui, sans-serif; padding: 20px }</style>
+<h1>focus thief</h1>
+<p>This page grabs focus every 300ms, the way a site with an autofocusing search
+   box or an ad iframe does. If the chat box cannot hold focus against it, the
+   user's keystrokes land here instead -- silently.</p>
+<input id="thief" placeholder="the page's own input">
+<script>
+  window.probe = {keydown: 0, keys: []};
+  addEventListener('keydown', e => { probe.keydown++; probe.keys.push(e.key); });
+  window.steals = 0;
+  window.startStealing = () => {
+    clearInterval(window.__t);
+    window.__t = setInterval(() => {
+      document.getElementById('thief').focus();
+      window.steals++;
+    }, 300);
+  };
+  window.stopStealing = () => clearInterval(window.__t);
+  startStealing();
+</script>

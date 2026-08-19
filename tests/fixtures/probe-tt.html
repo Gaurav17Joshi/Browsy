@@ -1,0 +1,18 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="require-trusted-types-for 'script'">
+<title>cuaexp probe (trusted types)</title>
+<h1>trusted types probe</h1>
+<p>Same as probe.html but with Trusted Types enforced, the way YouTube does it.
+   innerHTML throws here unless it goes through a policy.</p>
+<script>
+  window.probe = {keydown: 0, keydownCapture: 0, keyup: 0, click: 0, mousedown: 0,
+                  mouseup: 0, mousemove: 0, wheel: 0, drop: 0, keys: []};
+  addEventListener('keydown', e => { probe.keydown++; probe.keys.push(e.key); });
+  // Does this browser actually enforce the policy? The test refuses to claim a
+  // pass from a page where Trusted Types turned out to be inert.
+  window.ttEnforced = (() => {
+    try { document.createElement('div').innerHTML = '<i>x</i>'; return false; }
+    catch (e) { return true; }
+  })();
+</script>

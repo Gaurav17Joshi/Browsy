@@ -1,0 +1,21 @@
+# Chrome profile -- contains live session cookies for every site you log into
+.chrome-profile/
+.chrome-profile-test/
+
+# Run logs may contain page content from authenticated sessions
+logs/
+
+# Query history: your questions, the agent's answers, and where it was
+history/
+
+# Notes the agent wrote for itself
+memory.json
+
+.venv/
+__pycache__/
+*.pyc
+.env
+*.env.txt
+
+# Handoff notes between sessions -- scratch prose, not code
+Session/
