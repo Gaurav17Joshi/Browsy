@@ -855,6 +855,48 @@ async def main() -> int:
         R.add("ctrl+a selects all so typing replaces the field", val == "second",
               f"field holds {val!r}")
 
+        # ------------------------------------------------ 14c. autoscroll
+        # The chat follows new output, but must let go the moment you scroll up
+        # to read something -- and say so with a button rather than silently
+        # stranding you.
+        print("\n-- autoscroll and the jump button")
+        SCROLL = """(() => {
+          const r = document.getElementById('__cuaexp_host').shadowRoot;
+          const bd = r.getElementById('bd'), j = r.getElementById('jump');
+          return {top: bd.scrollTop,
+                  atBottom: bd.scrollHeight - bd.scrollTop - bd.clientHeight < 60,
+                  jump: j.classList.contains('on')};
+        })()"""
+        for i in range(30):
+            await mini.panel.push({"type": "assistant", "text": f"scroll probe {i}"})
+        await asyncio.sleep(0.9)
+        st = await cdp.eval_js(SCROLL)
+        R.add("the chat follows new output", st["atBottom"] and not st["jump"],
+              f"atBottom={st['atBottom']} jump={st['jump']}")
+
+        await cdp.eval_js("""(() => {
+          const bd = document.getElementById('__cuaexp_host').shadowRoot.getElementById('bd');
+          bd.dispatchEvent(new WheelEvent('wheel', {deltaY: -400, bubbles: true}));
+          bd.scrollTop = 0; })()""")
+        await asyncio.sleep(0.7)
+        st = await cdp.eval_js(SCROLL)
+        R.add("scrolling up offers a jump button", st["jump"], f"jump={st['jump']}")
+
+        for i in range(15):
+            await mini.panel.push({"type": "assistant", "text": f"arrived while reading {i}"})
+        await asyncio.sleep(0.9)
+        st = await cdp.eval_js(SCROLL)
+        R.add("new output does not yank the view down", st["top"] < 60,
+              f"scrollTop={st['top']:.0f}")
+
+        await cdp.eval_js("document.getElementById('__cuaexp_host')"
+                          ".shadowRoot.getElementById('jump').click()")
+        await asyncio.sleep(1.0)
+        st = await cdp.eval_js(SCROLL)
+        R.add("the jump button returns to the bottom and resumes",
+              st["atBottom"] and not st["jump"],
+              f"atBottom={st['atBottom']} jump={st['jump']}")
+
         # ------------------------------------------------ 15. socket endurance
         print(f"\n-- {args.soak}s of page churn")
         await cdp.eval_js("""(() => {

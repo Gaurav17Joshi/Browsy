@@ -204,8 +204,24 @@ PANEL_CSS = r"""
 .wrap.bubleft.busy:not(.open) .tbub { transform: none; }
 
 /* ---------- body ---------- */
-.bd { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 34px 12px 14px;
-      display: flex; flex-direction: column; gap: 9px; scroll-behavior: smooth; }
+.bdw { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column }
+.jump { position: absolute; left: 50%; bottom: 10px; z-index: 6;
+        transform: translateX(-50%) translateY(7px); opacity: 0; pointer-events: none;
+        transition: opacity .16s ease-out, transform .16s ease-out;
+        background: #2f6df5; color: #fff; border: 0; border-radius: 14px;
+        padding: 6px 13px; font: 12px/1 system-ui, sans-serif; cursor: pointer;
+        white-space: nowrap; box-shadow: 0 6px 18px rgba(0,0,0,.5) }
+.jump.on { opacity: 1; transform: translateX(-50%); pointer-events: auto }
+.jump:hover { background: #4a83ff }
+.bd { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
+      padding: 34px 12px 14px;
+      display: flex; flex-direction: column; gap: 9px; scroll-behavior: smooth;
+      /* Never hand the wheel to the page underneath. Without this, once the
+         chat is scrolled to its end the wheel chains to the document and the
+         page slides about behind the panel. That was always the behaviour; it
+         only stayed hidden because smooth-scrolling left the body mid-travel,
+         so it rarely sat exactly at its end. */
+      overscroll-behavior: contain; }
 .bd::-webkit-scrollbar { width: 9px }
 .bd::-webkit-scrollbar-thumb { background: #2e343d; border-radius: 5px;
                                border: 2px solid #14161b }
@@ -609,7 +625,10 @@ PANEL_JS = r"""
             '<button class="ico" id="new" title="New context (clears the chat, keeps the browser)">&#8635;</button>' +
             '<button class="ico stop" id="stop" title="Stop">&#9632;</button>' +
           '</div>' +
-          '<div class="bd" id="bd"></div>' +
+          '<div class="bdw">' +
+            '<div class="bd" id="bd"></div>' +
+            '<button class="jump" id="jump">Latest messages &#8595;</button>' +
+          '</div>' +
           '<div class="grip" id="grip"></div>' +
           '<div class="ft">' +
             '<div class="files" id="files"></div>' +
@@ -732,8 +751,32 @@ PANEL_JS = r"""
     }, true);
 
     // ---- rendering ---------------------------------------------------------
+    // Autoscroll that gets out of your way. `stuck` means "follow new output";
+    // scrolling up anywhere in the body drops it, and the jump button (or
+    // scrolling back to the bottom yourself) picks it up again.
+    const jump = $('jump');
+    let stuck = true, autoAt = 0;
     const atBottom = () => bd.scrollHeight - bd.scrollTop - bd.clientHeight < 60;
-    const scroll = (force) => { if (force || atBottom()) bd.scrollTop = bd.scrollHeight; };
+    const syncJump = () => jump.classList.toggle('on', !stuck);
+    const scroll = (force) => {
+      if (force) stuck = true;
+      // Timestamp our own scrolls: `.bd` uses scroll-behavior:smooth, so the
+      // animation fires scroll events at positions that are not yet the bottom.
+      // Without this window those read as "the user scrolled up" and autoscroll
+      // would switch itself off the moment output arrived.
+      if (stuck) { autoAt = Date.now(); bd.scrollTop = bd.scrollHeight; }
+      syncJump();
+    };
+    bd.addEventListener('scroll', () => {
+      if (Date.now() - autoAt < 450) return;
+      stuck = atBottom(); syncJump();
+    });
+    // A wheel gesture counts even mid-animation, so scrolling up during a burst
+    // of output stops the chase immediately rather than fighting it.
+    bd.addEventListener('wheel', (e) => {
+      if (e.deltaY < 0 && stuck) { stuck = false; syncJump(); }
+    }, {passive: true});
+    jump.onclick = () => scroll(true);
 
     // The model writes markdown whether or not anyone asked it to, and raw
     // **asterisks** in the chat look like a bug. Just the three that actually
