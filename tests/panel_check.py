@@ -897,6 +897,46 @@ async def main() -> int:
               st["atBottom"] and not st["jump"],
               f"atBottom={st['atBottom']} jump={st['jump']}")
 
+        # ---------------------------------------- 14d. navigation keeps your place
+        # Every navigation rebuilds the panel from scratch. Two things used to go
+        # wrong: it animated in from its CSS defaults (a visible pop on each page
+        # load), and it slammed the conversation back to the bottom even if you
+        # had scrolled up to read something.
+        print("\n-- navigation does not disturb the chat")
+        for i in range(40):
+            await mini.say({"type": "assistant", "text": f"nav probe {i} " + "z" * 40})
+        await asyncio.sleep(0.9)
+        await cdp.eval_js("""(() => {
+          const bd = document.getElementById('__cuaexp_host').shadowRoot.getElementById('bd');
+          bd.dispatchEvent(new WheelEvent('wheel', {deltaY: -400, bubbles: true}));
+          bd.scrollTop = 200; })()""")
+        await asyncio.sleep(0.9)
+
+        await cdp.page("Page.navigate", {"url": PROBE})
+        await asyncio.sleep(0.05)
+        early = await cdp.eval_js("""(() => {
+          const h = document.getElementById('__cuaexp_host');
+          if (!h || !h.shadowRoot) return {mounted: false};
+          const cs = getComputedStyle(h.shadowRoot.getElementById('p'));
+          return {mounted: true, transform: cs.transform, opacity: cs.opacity};
+        })()""")
+        R.add("the panel does not animate in on every page load",
+              (not early.get("mounted"))
+              or (early.get("transform") == "none" and early.get("opacity") == "1"),
+              f"transform={early.get('transform')} opacity={early.get('opacity')}")
+
+        await wait_panel(cdp)
+        await asyncio.sleep(1.2)
+        st = await cdp.eval_js("""(() => {
+          const r = document.getElementById('__cuaexp_host').shadowRoot;
+          const bd = r.getElementById('bd');
+          return {top: Math.round(bd.scrollTop),
+                  jump: r.getElementById('jump').classList.contains('on')};
+        })()""")
+        R.add("navigating keeps where you had scrolled to", abs(st["top"] - 200) < 40,
+              f"scrollTop={st['top']}, wanted ~200")
+        R.add("and keeps offering the jump button", st["jump"], f"jump={st['jump']}")
+
         # ------------------------------------------------ 15. socket endurance
         print(f"\n-- {args.soak}s of page churn")
         await cdp.eval_js("""(() => {

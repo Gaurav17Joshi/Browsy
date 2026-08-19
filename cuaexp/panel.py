@@ -145,6 +145,14 @@ PANEL_CSS = r"""
 .wrap { position: fixed; left: 0; top: 0; width: 0; height: 0; z-index: 1;
         transition: left .34s cubic-bezier(.2,.9,.3,1.1), top .34s cubic-bezier(.2,.9,.3,1.1); }
 .wrap.drag, .wrap.sizing { transition: none; }
+/* First frame after a mount. Every navigation rebuilds this panel from
+   scratch, so the element is born at its CSS defaults (top-left, folded, .p
+   scaled to .4) and only then does applyUI put it where it belongs. With
+   transitions live that difference is animated -- the panel visibly slides in
+   and the chat pops open -- once per page load. Suppress them until the real
+   state has been painted, then switch them back on for genuine interaction. */
+.wrap.boot, .wrap.boot .p, .wrap.boot .botwrap, .wrap.boot .bot * {
+  transition: none !important; animation: none !important; }
 
 .p { position: absolute; width: 400px; height: 540px;
      display: flex; flex-direction: column;
@@ -551,7 +559,8 @@ PANEL_JS = r"""
   })();
   const setHTML = (el, html) => { el.innerHTML = TT ? TT.createHTML(html) : html; };
 
-  let ui = Object.assign({w: 400, h: 540, inH: 42, left: null, top: null, open: false},
+  let ui = Object.assign({w: 400, h: 540, inH: 42, left: null, top: null, open: false,
+                          stuck: true, sTop: 0},
                          SEED.ui || {});
   const send = (o) => { try { window.__CUAEXP_BINDING__(JSON.stringify(o)); } catch (e) {} };
 
@@ -614,7 +623,7 @@ PANEL_JS = r"""
 
     setHTML(root,
       '<style>' + CSS + '</style>' +
-      '<div class="wrap" id="wrap">' +
+      '<div class="wrap boot" id="wrap">' +
         '<div class="p" id="p">' +
           ['n','s','e','w','ne','nw','se','sw']
             .map(d => '<div class="rz ' + d + '" data-rz="' + d + '"></div>').join('') +
@@ -755,7 +764,26 @@ PANEL_JS = r"""
     // scrolling up anywhere in the body drops it, and the jump button (or
     // scrolling back to the bottom yourself) picks it up again.
     const jump = $('jump');
-    let stuck = true, autoAt = 0;
+    // `stuck` rides in ui, which round-trips through the daemon's seed -- so a
+    // navigation restores where you were reading instead of yanking you to the
+    // bottom of a conversation you had scrolled up in.
+    let stuck = ui.stuck !== false, autoAt = 0, saveT = 0;
+    // Where we are meant to end up, grabbed NOW. Repainting the conversation
+    // calls scroll() once per message, and each of those would otherwise write
+    // the current -- still zero -- position back over ui.sTop, so by the time we
+    // came to restore it the target had been erased by the restore itself.
+    const wantTop = ui.sTop || 0;
+    let restoring = !stuck;
+    // True while history is being repainted. A user message arriving live
+    // should jump you to the bottom; the same message being redrawn after a
+    // navigation should not -- that was quietly cancelling the restore.
+    let repainting = false;
+    const rememberScroll = () => {
+      if (restoring) return;              // nothing during the repaint counts
+      ui.stuck = stuck;
+      ui.sTop = Math.round(bd.scrollTop);
+      clearTimeout(saveT); saveT = setTimeout(saveUI, 400);
+    };
     const atBottom = () => bd.scrollHeight - bd.scrollTop - bd.clientHeight < 60;
     const syncJump = () => jump.classList.toggle('on', !stuck);
     const scroll = (force) => {
@@ -765,16 +793,16 @@ PANEL_JS = r"""
       // Without this window those read as "the user scrolled up" and autoscroll
       // would switch itself off the moment output arrived.
       if (stuck) { autoAt = Date.now(); bd.scrollTop = bd.scrollHeight; }
-      syncJump();
+      syncJump(); rememberScroll();
     };
     bd.addEventListener('scroll', () => {
       if (Date.now() - autoAt < 450) return;
-      stuck = atBottom(); syncJump();
+      stuck = atBottom(); syncJump(); rememberScroll();
     });
     // A wheel gesture counts even mid-animation, so scrolling up during a burst
     // of output stops the chase immediately rather than fighting it.
     bd.addEventListener('wheel', (e) => {
-      if (e.deltaY < 0 && stuck) { stuck = false; syncJump(); }
+      if (e.deltaY < 0 && stuck) { stuck = false; syncJump(); rememberScroll(); }
     }, {passive: true});
     jump.onclick = () => scroll(true);
 
@@ -807,7 +835,7 @@ PANEL_JS = r"""
       const d = document.createElement('div');
       d.className = 'm ' + cls;
       richText(d, text);
-      bd.appendChild(d); scroll(cls === 'u'); return d;
+      bd.appendChild(d); scroll(!repainting && cls === 'u'); return d;
     };
     // Turn a raw tool call into something a person can skim.
     // Written as \u escapes on purpose: this file gets round-tripped by tooling
@@ -1032,8 +1060,25 @@ PANEL_JS = r"""
           // Authoritative repaint from the daemon. Skip when it matches what is
           // already on screen, so a routine re-mount does not flash.
           if ((m.items || []).length !== window.__cuaexpItems.length) {
+            // Hold your place across the repaint. The daemon sends this right
+            // after every navigation, and replaceChildren() resets scrollTop to
+            // 0 -- so forcing the bottom here undid the restore that had just
+            // put the conversation back where you were reading it.
+            const keep = stuck ? null : Math.round(bd.scrollTop);
             window.__cuaexpItems = (m.items || []).slice();
-            bd.replaceChildren(); window.__cuaexpItems.forEach(paint); scroll(true);
+            repainting = true;
+            bd.replaceChildren(); window.__cuaexpItems.forEach(paint);
+            repainting = false;
+            if (keep === null) {
+              scroll(true);
+            } else {
+              const prev = bd.style.scrollBehavior;
+              bd.style.scrollBehavior = 'auto';
+              autoAt = Date.now();
+              bd.scrollTop = keep;
+              bd.style.scrollBehavior = prev;
+              syncJump();
+            }
           }
           break;
         case 'ui': ui = Object.assign(ui, m.ui || {}); applyUI(); break;
@@ -1216,8 +1261,40 @@ PANEL_JS = r"""
     // ---- paint immediately, so navigation does not flash an empty panel.
     // Paint from the live store, which a re-mount preserves; SEED only seeds it
     // on a genuinely fresh document.
+    repainting = true;
     window.__cuaexpItems.forEach(paint);
-    scroll(true);
+    repainting = false;
+    if (stuck) {
+      scroll(true);
+    } else {
+      // Restore silently: no smooth animation to watch, and stamped so it is not
+      // mistaken for the user scrolling.
+      //
+      // Applied more than once on purpose. This runs at document-start, when the
+      // body has just appeared and the chat has not been laid out yet -- setting
+      // scrollTop against a still-zero scrollHeight clamps it to 0, and the
+      // position is lost exactly when we were trying to keep it. So: now, on the
+      // next painted frame, and once more after layout has certainly settled.
+      const restore = () => {
+        const prev = bd.style.scrollBehavior;
+        bd.style.scrollBehavior = 'auto';
+        autoAt = Date.now();
+        bd.scrollTop = wantTop;
+        bd.style.scrollBehavior = prev;
+        syncJump();
+      };
+      restore();
+      requestAnimationFrame(() => requestAnimationFrame(restore));
+      setTimeout(() => { restore(); restoring = false; }, 160);
+    }
+
+    // The panel is now where it should be. Force a reflow so the browser has
+    // certainly painted this state, then re-enable transitions on the next
+    // frame; anything that moves from here on is a real interaction.
+    void wrap.offsetWidth;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      wrap.classList.remove('boot');
+    }));
 
     // First time Browsy appears in this tab, he waves and flashes the button --
     // when the chat is folded away that button is the entire interface, so it
