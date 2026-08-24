@@ -74,6 +74,14 @@ CHROME_CANDIDATES = [
     "/usr/bin/google-chrome",
 ]
 
+# --- Local files ------------------------------------------------------------
+# One fenced directory. Browsy reads untrusted page text for a living, so its
+# file access is opt-in by placement: put a file in the workspace and it can be
+# read, leave it anywhere else and it cannot. Writes are narrower still.
+FILE_ROOT = Path(os.environ.get("CUAEXP_FILE_ROOT", PROJECT_ROOT / "workspace")).expanduser()
+FILE_OUT = FILE_ROOT / "output"
+MAX_FILE_BYTES = int(os.environ.get("CUAEXP_MAX_FILE_BYTES", str(400_000)))
+
 # --- Limits -----------------------------------------------------------------
 # A runaway brake, not a work budget. In the OSWorld run every task that
 # finished used 4-34 tool calls; the only two that reached the old cap of 40

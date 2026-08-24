@@ -16,6 +16,8 @@ from agents import ToolOutputImage, function_tool
 from . import memory
 from .config import STALE_SNAPSHOT_PLACEHOLDER
 from .session import BrowserSession
+from . import files as localfiles
+from .files import FileDenied
 
 log = logging.getLogger("cuaexp.tools")
 
@@ -238,10 +240,53 @@ def build_tools(sess: BrowserSession) -> list:
         return _done("remember", t0, memory.remember(note, tag))
 
     @function_tool
+    async def read_file(path: str) -> str:
+        """Read a text file from the local workspace directory.
+
+        Only files inside the workspace can be read -- that fence is enforced in
+        code, not here. Pass a name relative to it, e.g. "notes.md" or
+        "papers/draft.txt". Passing a directory lists it.
+
+        If a file the user mentions is not there, say so and ask them to move it
+        in. Do not try to reach it by another path; every route out is refused.
+        """
+        t0 = _wrap("read_file", {"path": path})
+        try:
+            out = localfiles.read_file(path)
+        except FileDenied as e:
+            out = str(e)
+        except Exception as e:
+            out = f"read_file failed: {e}"
+        return _done("read_file", t0, out)
+
+    @function_tool
+    async def write_file(path: str, content: str) -> str:
+        """Write a text file into the workspace output directory.
+
+        Use this for anything the user should still have afterwards -- a report,
+        a summary, an HTML page. Returns the path written. To show an HTML file
+        you have just written, open its file:// URL with navigate().
+
+        Writes land in the output directory only; nothing else on the machine is
+        writable.
+        """
+        t0 = _wrap("write_file", {"path": path, "bytes": len(content or "")})
+        try:
+            written = localfiles.write_file(path, content or "")
+            out = f"wrote {written} ({len(content or '')} chars). "
+            out += f"Open it with navigate({localfiles.as_url(path)!r})"
+        except FileDenied as e:
+            out = str(e)
+        except Exception as e:
+            out = f"write_file failed: {e}"
+        return _done("write_file", t0, out)
+
+    @function_tool
     async def recall(query: str = "") -> str:
         """Look up earlier notes. Empty query returns everything recent."""
         t0 = _wrap("recall", {"query": query})
         return _done("recall", t0, memory.recall(query))
 
     return [snapshot, click, fill, select_option, press, press_sequence, scroll, navigate,
-            go_back, run_js, screenshot, click_at, remember, recall]
+            go_back, run_js, screenshot, click_at, remember, recall,
+            read_file, write_file]

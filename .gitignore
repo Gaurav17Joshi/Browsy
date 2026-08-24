@@ -19,3 +19,6 @@ __pycache__/
 
 # Handoff notes between sessions -- scratch prose, not code
 Session/
+
+# Files the user hands to Browsy, and anything it writes back
+workspace/

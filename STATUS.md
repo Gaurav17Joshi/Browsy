@@ -378,7 +378,8 @@ has been an interaction bug, invisible when reading the code.
 
 | | why it is interesting |
 |---|---|
-| **Local file access** (`read_file` / `upload_file`) | needed for "here's a PDF path, put it on Drive". Requires `Page.setInterceptFileChooserDialog` + `DOM.setFileInputFiles`, and a path allowlist enforced in code — a page must not be able to talk it into reading a key file |
+| **Upload to a page** (`DOM.setFileInputFiles` + `Page.setInterceptFileChooserDialog`) | the other half of "here's a PDF, put it on Drive". `read_file` now exists; handing a real file to a page's file input does not |
+| **A shell tool** | the obvious next capability, and the one that breaks the current threat model rather than extending it. Browsy ingests untrusted page text by design, so a shell means web content can reach command execution. If it is built it wants the `DANGER` confirm-gate in front of it and no permissive browsing alongside |
 | **Date-picker helper** | the single biggest failure mode in the benchmark; set the value and fire the events the widget listens for |
 | **Skill / action caching** | replay a known-good trajectory instead of re-deriving it |
 | **Local Fara1.5 on the 24GB pod** | vision-only CUA, MIT licensed; best first use is a `locate(description) → (x,y)` grounding tool, not a whole driver |
