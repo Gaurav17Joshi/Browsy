@@ -107,13 +107,22 @@ def read_file(path: str) -> str:
     return raw.decode("utf-8", "replace")
 
 
-def write_file(path: str, content: str) -> str:
+def write_file(path: str, content: str, append: bool = False) -> str:
+    """Write (or append to) a file in the output directory. Returns the path."""
     p = _check(path, FILE_OUT, "output")
-    if len(content.encode("utf-8", "replace")) > MAX_FILE_BYTES:
-        raise FileDenied(f"content is over the {MAX_FILE_BYTES:,} byte limit")
+    incoming = len(content.encode("utf-8", "replace"))
+    existing = p.stat().st_size if (append and p.exists()) else 0
+    # The cap is on the resulting file, not on one call -- otherwise appending
+    # in small pieces walks straight past it.
+    if existing + incoming > MAX_FILE_BYTES:
+        raise FileDenied(
+            f"that would make the file {existing + incoming:,} bytes, over the "
+            f"{MAX_FILE_BYTES:,} limit. Start a new file instead.")
     p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(content, encoding="utf-8")
-    log.info("wrote %s (%s bytes)", p, p.stat().st_size)
+    with p.open("a" if append else "w", encoding="utf-8", newline="") as fh:
+        fh.write(content)
+    log.info("%s %s (now %s bytes)", "appended to" if append else "wrote",
+             p, p.stat().st_size)
     return str(p)
 
 

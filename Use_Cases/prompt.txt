@@ -61,8 +61,17 @@ prefer recent videos -- a review of last year's version is worse than useless.
 Comment sections disagree with benchmark tables more often than you would
 think — where they do, say so.
 
-Work model by model. Finish one, remember() a compact note of what you found,
-then move to the next, so nothing is lost if the run gets long.
+Work model by model, and write your findings down as you go. When you finish a
+model, append everything you found on it to a notes file:
+
+  write_file("research-notes.txt", "<everything on that model>", append=True)
+
+Do that after each one, before starting the next. Include the numbers, the
+sources you got them from, and the comment quotes verbatim -- this file is the
+record, so anything not in it may as well not have been found. Also remember() a
+one-line summary per model.
+
+If something goes wrong later, the notes survive; the conversation may not.
 
 When the research is done, build the page. First call
 read_file("web-design.md") and follow what it says -- it covers the layout, the
@@ -74,6 +83,10 @@ this should be able to open it and come away understanding the open-model scene.
 Make it interactive -- cards that expand when clicked to show the full detail on
 a model, a table that sorts, bars for the benchmark and VRAM numbers. Give each
 model a logo tile in its company's colour.
+
+Before you write any HTML, read your own notes back with
+read_file("output/research-notes.txt") so the page is built from what you
+recorded rather than from what you can still remember.
 
 Build it in one run_js call, like this:
 
@@ -101,7 +114,7 @@ What the page should contain:
 
 After the tab opens, just give me a couple of lines on what you did -- how many
 models, how many videos, anything that got in the way. Not a report; the page is
-the report.
+the report, and research-notes.txt is the evidence behind it.
 ------------------------------ END PROMPT ------------------------------
 
 
@@ -132,9 +145,16 @@ Why it is written this way
     quietly review the wrong thing. See "About the line-up" below for what was
     checked. If you run this well after that date, re-check it first.
 
-"remember() after each model"
-    Five models plus fifteen-odd YouTube pages is a long run. Notes survive a
-    context reset; the conversation may not.
+"write your findings down as you go"
+    Five models plus fifteen-odd YouTube pages is a long run, and everything
+    gathered in turn 20 has to still be usable in turn 90. Appending to a file
+    after each model means the research outlives the context: if the run is
+    stopped, hits the turn cap, or the page build fails, the findings are on
+    disk and the page can be rebuilt from them without re-reading a single
+    video. It also leaves you something to check the page against afterwards.
+
+    write_file only writes inside the workspace output directory, so the file
+    lands at workspace/output/research-notes.txt.
 
 Verified before this was written
 --------------------------------

@@ -263,20 +263,27 @@ def build_tools(sess: BrowserSession) -> list:
         return _done("read_file", t0, out)
 
     @function_tool
-    async def write_file(path: str, content: str) -> str:
+    async def write_file(path: str, content: str, append: bool = False) -> str:
         """Write a text file into the workspace output directory.
 
-        Use this for anything the user should still have afterwards -- a report,
-        a summary, an HTML page. Returns the path written. To show an HTML file
-        you have just written, open its file:// URL with navigate().
+        Use this for anything the user should still have afterwards -- notes as
+        you gather them, a report, an HTML page. Returns the path written. To
+        show an HTML file you have just written, open its file:// URL with
+        navigate().
+
+        Pass append=True to add to the end of an existing file instead of
+        replacing it, which is how to keep a running log without resending
+        everything you have already written.
 
         Writes land in the output directory only; nothing else on the machine is
         writable.
         """
-        t0 = _wrap("write_file", {"path": path, "bytes": len(content or "")})
+        t0 = _wrap("write_file", {"path": path, "bytes": len(content or ""),
+                                  "append": append})
         try:
-            written = localfiles.write_file(path, content or "")
-            out = f"wrote {written} ({len(content or '')} chars). "
+            written = localfiles.write_file(path, content or "", append=append)
+            out = (f"{'appended to' if append else 'wrote'} {written} "
+                   f"({len(content or '')} chars). ")
             out += f"Open it with navigate({localfiles.as_url(path)!r})"
         except FileDenied as e:
             out = str(e)

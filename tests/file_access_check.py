@@ -64,6 +64,20 @@ def main() -> int:
     allowed("and reads back", lambda: read_file("output/report.html"), "<h1>hi</h1>")
     allowed("subdirectories are created", lambda: write_file("a/b/c.txt", "deep"), "c.txt")
 
+    write_file("log.txt", "one" + chr(10))
+    write_file("log.txt", "two" + chr(10), append=True)
+    write_file("log.txt", "three" + chr(10), append=True)
+    allowed("appending builds up a running log",
+            lambda: read_file("output/log.txt"), "one" + chr(10) + "two" + chr(10) + "three")
+    write_file("log.txt", "replaced" + chr(10))
+    allowed("without append it replaces", lambda: read_file("output/log.txt"), "replaced")
+    # A cap that only looked at one call would be walked past in small steps.
+    write_file("creep.txt", "z" * (MAX_FILE_BYTES - 10))
+    denied("appending past the cap",
+           lambda: write_file("creep.txt", "z" * 100, append=True))
+    denied("appending outside the output directory",
+           lambda: write_file("../sneak.txt", "x", append=True))
+
     print("\n-- escaping the fence")
     allowed("a skill reads by bare name", lambda: read_file("web-design.md"),
             "single-file web page")
