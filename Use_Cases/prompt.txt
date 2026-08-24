@@ -98,10 +98,19 @@ Things that may still bite
   - YouTube is heavy. Comments load lazily and need scrolling before they are
     in the accessibility tree. Expect the agent to scroll, snapshot, scroll
     again. This is the slowest part of the task by a wide margin.
-  - MAX_TURNS is 40 by default. This task can exceed that; raise it with
-    CUAEXP_MAX_TURNS if the run stops early with a partial answer.
+  - MAX_TURNS is 120, raised from 40 for exactly this task. The research is
+    estimated at 75-95 tool calls, so there is headroom but not a lot; if it
+    still stops early with a partial answer, raise CUAEXP_MAX_TURNS further.
+    Note what the cap actually is: a brake on a stuck run, not a work budget.
+    Every OSWorld task that finished used 4-34 calls.
   - Run without --allow. The task legitimately spans YouTube, vendor sites,
     Hugging Face, leaderboards and news. An allowlist will block it midway.
     Do not stay signed into anything you care about while recording.
-  - Cost. The earlier ten-task OSWorld run came to $4.78 with 80% cached; this
-    one is comparable or larger, and most of it is YouTube snapshots.
+  - Cost. Budget around $8-12 for a full run, and know where it comes from:
+    on heavy pages a turn carries roughly 150k input tokens, which at 80%
+    cached is about $0.08 a turn. The whole ten-task OSWorld run was $4.78, and
+    a single stuck task in it was $3.68 on its own. Most of the spend here will
+    be YouTube snapshots.
+  - The higher cap cuts both ways. A run that gets stuck now burns three times
+    as much before giving up as it did at 40. If that matters on a given day,
+    set CUAEXP_MAX_TURNS back down for it.

@@ -75,7 +75,13 @@ CHROME_CANDIDATES = [
 ]
 
 # --- Limits -----------------------------------------------------------------
-MAX_TURNS = int(os.environ.get("CUAEXP_MAX_TURNS", "40"))
+# A runaway brake, not a work budget. In the OSWorld run every task that
+# finished used 4-34 tool calls; the only two that reached the old cap of 40
+# were failures that had got stuck. 120 leaves room for genuinely long
+# research tasks -- five models and a dozen YouTube comment sections runs to
+# roughly 75-95 calls -- at the cost of a stuck run burning more before it
+# gives up. Lower it with CUAEXP_MAX_TURNS if that trade is wrong for you.
+MAX_TURNS = int(os.environ.get("CUAEXP_MAX_TURNS", "120"))
 SNAPSHOT_CHAR_BUDGET = 14000   # raw tree cut-off before trimming kicks in
 # Only start placeholdering stale snapshots once accumulated tool output passes
 # this. Below it, a byte-stable prefix is worth more than the tokens saved,
