@@ -243,9 +243,12 @@ def build_tools(sess: BrowserSession) -> list:
     async def read_file(path: str) -> str:
         """Read a text file from the local workspace directory.
 
-        Only files inside the workspace can be read -- that fence is enforced in
-        code, not here. Pass a name relative to it, e.g. "notes.md" or
-        "papers/draft.txt". Passing a directory lists it.
+        Two directories are readable and nothing else, a fence enforced in code
+        rather than here: the workspace, where the user puts files for you, and
+        the skills directory, which holds reference guides you are meant to
+        follow. Pass a bare name and both are tried, e.g. read_file("notes.md")
+        or read_file("web-design.md"). Passing a directory lists it, which is
+        how to see what skills exist.
 
         If a file the user mentions is not there, say so and ask them to move it
         in. Do not try to reach it by another path; every route out is refused.

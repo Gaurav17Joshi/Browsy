@@ -15,7 +15,8 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from cuaexp.config import FILE_OUT, FILE_ROOT, KEYFILE, MAX_FILE_BYTES  # noqa: E402
+from cuaexp.config import (FILE_OUT, FILE_ROOT, KEYFILE, MAX_FILE_BYTES,  # noqa: E402
+                           SKILLS_DIR)
 from cuaexp.files import FileDenied, read_file, write_file  # noqa: E402
 
 rows: list[tuple[str, bool, str]] = []
@@ -64,6 +65,13 @@ def main() -> int:
     allowed("subdirectories are created", lambda: write_file("a/b/c.txt", "deep"), "c.txt")
 
     print("\n-- escaping the fence")
+    allowed("a skill reads by bare name", lambda: read_file("web-design.md"),
+            "single-file web page")
+    allowed("the skills directory lists", lambda: read_file(str(SKILLS_DIR)), "directory")
+    denied("writing into the skills directory",
+           lambda: write_file(str(SKILLS_DIR / "injected.md"), "x"))
+    denied("traversing out of the skills root", lambda: read_file("../prompt.txt"))
+
     denied("relative traversal", lambda: read_file("../cuaexp/config.py"))
     denied("doubled traversal", lambda: read_file("../../../../Windows/System32/drivers/etc/hosts"))
     denied("traversal buried mid-path", lambda: read_file("sub/../../cuaexp/keyfile.py"))

@@ -80,6 +80,13 @@ CHROME_CANDIDATES = [
 # read, leave it anywhere else and it cannot. Writes are narrower still.
 FILE_ROOT = Path(os.environ.get("CUAEXP_FILE_ROOT", PROJECT_ROOT / "workspace")).expanduser()
 FILE_OUT = FILE_ROOT / "output"
+# Reference material the agent is meant to read -- design guides, house style,
+# anything reusable. Readable, never writable, and version controlled, unlike the
+# workspace. Put nothing secret here: it is readable by a model that reads web
+# pages for a living.
+SKILLS_DIR = Path(os.environ.get("CUAEXP_SKILLS_DIR",
+                                 PROJECT_ROOT / "Use_Cases" / "Skills")).expanduser()
+READ_ROOTS = [FILE_ROOT, SKILLS_DIR]
 MAX_FILE_BYTES = int(os.environ.get("CUAEXP_MAX_FILE_BYTES", str(400_000)))
 
 # --- Limits -----------------------------------------------------------------

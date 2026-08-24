@@ -19,7 +19,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from .config import FILE_OUT, FILE_ROOT, KEYFILE, MAX_FILE_BYTES
+from .config import FILE_OUT, FILE_ROOT, KEYFILE, MAX_FILE_BYTES, READ_ROOTS, SKILLS_DIR
 
 log = logging.getLogger("cuaexp.files")
 
@@ -35,20 +35,42 @@ def _inside(path: Path, root: Path) -> bool:
         return False
 
 
-def _check(path: str, root: Path, what: str) -> Path:
-    """Resolve `path` and prove it lands inside `root`, or refuse."""
+def _check(path: str, roots: list[Path] | Path, what: str) -> Path:
+    """Resolve `path` and prove it lands inside one of `roots`, or refuse.
+
+    A relative path is tried against each root in turn and the first that both
+    contains it and exists wins; failing that, the first root, so the error names
+    somewhere sensible. An absolute path just has to land inside one of them.
+    """
+    if isinstance(roots, Path):
+        roots = [roots]
     if not path or not path.strip():
         raise FileDenied("no path given")
     raw = Path(path.strip().strip('"').strip("'")).expanduser()
-    target = (root / raw) if not raw.is_absolute() else raw
-    try:
-        resolved = target.resolve()
-    except (OSError, ValueError) as e:
-        raise FileDenied(f"cannot resolve that path: {e}") from e
 
-    if not _inside(resolved, root):
+    resolved, escaped = None, False
+    for root in roots:
+        target = raw if raw.is_absolute() else (root / raw)
+        try:
+            cand = target.resolve()
+        except (OSError, ValueError) as e:
+            raise FileDenied(f"cannot resolve that path: {e}") from e
+        if not _inside(cand, root):
+            escaped = True
+            continue
+        if cand.exists():
+            resolved = cand
+            break
+        if resolved is None:
+            resolved = cand       # first plausible location, for the error message
+    # An escape must be reported AS an escape. Without this the path that broke
+    # out of one root fell through to the next, where the same relative name
+    # merely does not exist -- so a traversal attempt came back as a bland "no
+    # such file" pointing at a directory it never touched.
+    if resolved is None or (escaped and not resolved.exists()):
+        shown = " or ".join(str(r.resolve()) for r in roots)
         raise FileDenied(
-            f"DENIED: {resolved} is outside the {what} directory ({root.resolve()}). "
+            f"DENIED: that path is outside the {what} directory ({shown}). "
             f"Only paths inside it are allowed. If the user wants a file read, "
             f"they must place it there themselves -- do not ask them to move the "
             f"fence, and do not try another path.")
@@ -64,9 +86,10 @@ def _check(path: str, root: Path, what: str) -> Path:
 
 
 def read_file(path: str) -> str:
-    p = _check(path, FILE_ROOT, "workspace")
+    p = _check(path, READ_ROOTS, "workspace or skills")
     if not p.exists():
-        raise FileDenied(f"no such file: {p} (workspace is {FILE_ROOT.resolve()})")
+        raise FileDenied(f"no such file: {p} (readable roots are "
+                         f"{FILE_ROOT.resolve()} and {SKILLS_DIR.resolve()})")
     if p.is_dir():
         names = sorted(x.name + ("/" if x.is_dir() else "") for x in p.iterdir())
         return f"{p} is a directory containing: " + (", ".join(names[:200]) or "(empty)")

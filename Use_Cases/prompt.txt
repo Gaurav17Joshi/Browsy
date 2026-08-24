@@ -1,12 +1,9 @@
 Open-model comparison — demo task for Browsy
 ============================================
 
-Paste the block between the lines into the chat panel, attach
-Use_Cases/Skills/web-design.md with the paperclip, and send it.
-
-The attachment matters: Browsy has no filesystem, so it cannot open a file you
-merely point it at. Text files attached in the panel are inlined into the turn,
-which is how the design guide reaches it.
+Paste the block between the lines into the chat panel and send it. Nothing to
+attach: Browsy reads the design guide itself, out of Use_Cases/Skills, which is
+one of the two directories it is allowed to read.
 
 Suggested launch (permissive, because the task spans many domains):
 
@@ -67,10 +64,10 @@ think — where they do, say so.
 Work model by model. Finish one, remember() a compact note of what you found,
 then move to the next, so nothing is lost if the run gets long.
 
-When the research is done, build the page. I have attached a file called
-web-design.md -- follow it. It covers the layout, the type scale, the colour
-tokens, how to do logos with no network, and the interaction patterns. Read it
-before you start writing HTML.
+When the research is done, build the page. First call
+read_file("web-design.md") and follow what it says -- it covers the layout, the
+type scale, the colour tokens, how to do logos with no network, and the
+interaction patterns. Read it before you write any HTML.
 
 The page has to be worth looking at on its own: someone who knows nothing about
 this should be able to open it and come away understanding the open-model scene.
