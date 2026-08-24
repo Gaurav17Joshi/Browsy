@@ -11,22 +11,20 @@ Notes before you run it are at the bottom of this file.
 
 
 -------------------------------- PROMPT --------------------------------
-I want a comparison of five specific open-weight models, and then a web page
-presenting it. One model from each of these companies:
+I want a comparison of these five open-weight models, all released in the last
+few weeks, and then a web page presenting it:
 
-  - Alibaba, the newest Qwen release
-  - Meta, their newest open-weight release. The name might be something like
-    "Muse Spark" -- treat that as a rumour and confirm what it is actually
-    called before you use it anywhere
-  - Z.ai / Zhipu, the newest GLM release
-  - DeepSeek, their newest release
-  - Moonshot AI, Kimi K3
+  - Qwen 3.8-27B          Alibaba, 15 Aug 2026, 27B dense
+  - Muse Glimmer          Meta, 10 Aug 2026, 30B
+  - DeepSeek V4-Pro-0813  DeepSeek, 13 Aug 2026, 1.6T MoE / 49B active, MIT
+  - Kimi K3               Moonshot AI, weights 27 Jul 2026, 2.8T MoE / 104B active
+  - GLM-5.3               Z.ai / Zhipu, 14 Aug 2026
 
-In every case I want their LATEST model -- ideally something released in the
-last month or so. Find what that actually is; do not assume you know. If a
-company's newest is older than that, use it anyway and say how old it is.
-Record the exact model name and release date for each before going further,
-and tell me in the chat what five you settled on.
+Those names and dates are correct as of 24 Aug 2026 -- use them as given, do
+not go looking for a "newer" one. Two things to know: Meta's Muse Spark 1.2 is
+NOT this model and its weights are not out, so ignore it if you meet it; and
+GLM-5.3's weights were due around 28 Aug, so check whether they have actually
+landed and say plainly if they have not.
 
 Research each one. For each model, find:
   - the exact release date and the parameter sizes it ships in
@@ -92,13 +90,11 @@ Why it is written this way
     The generated page has a blob: origin. External requests from it are
     unreliable and a CDN font or script will simply not arrive.
 
-"find what that actually is; do not assume you know"
-    The models are named by vendor rather than by product on purpose. These
-    releases are weeks old; any name written into this file would be a guess,
-    and a confident wrong name is worse than none -- the agent would go and
-    research a model that does not exist. Naming the company and asking for its
-    newest release makes the task self-correcting, and web_search resolves it in
-    one call.
+"use them as given, do not go looking for a newer one"
+    The five were looked up and verified on 24 Aug 2026, so the agent does not
+    have to spend turns establishing what it is even reviewing -- and cannot
+    quietly review the wrong thing. See "About the line-up" below for what was
+    checked. If you run this well after that date, re-check it first.
 
 "remember() after each model"
     Five models plus fifteen-odd YouTube pages is a long run. Notes survive a
@@ -115,6 +111,37 @@ That last part needed a fix. sync_active_tab() only followed a new tab when its
 URL began with "http", which excluded blob: — so the agent would build the
 report, open it, and go on talking to the tab behind it. The filter now skips
 placeholder targets (about:, chrome:, devtools:) instead of requiring http.
+
+About the line-up
+-----------------
+
+Verified by search on 24 Aug 2026:
+
+  Qwen 3.8-27B     Released 15 Aug 2026. Dense 27B vision-language model that
+                   fits on one consumer GPU. Alibaba also opened the weights of
+                   the 2.4T Qwen3.8-Max around 12-13 Aug; the 27B is the one
+                   people can actually run, so it is the one in this list.
+
+  Muse Glimmer     Released 10 Aug 2026. 30B, built to run on a laptop with a
+                   single GPU. NOTE: this is not Muse Spark. Meta said it would
+                   open Muse Spark 1.2's weights "in the coming weeks" and as of
+                   24 Aug that had not happened, so Glimmer is Meta's current
+                   open-weight model and Spark is not.
+
+  DeepSeek V4-Pro  Checkpoint V4-Pro-0813, 13 Aug 2026. 1.6T MoE, 49B active,
+                   1M context, MIT licence, weights on Hugging Face.
+
+  Kimi K3          Model 16 Jul, weights 27 Jul 2026. 2.8T MoE, 104B active --
+                   the largest open-weight model going. 1M context, Modified
+                   MIT. The oldest of the five, by about four weeks.
+
+  GLM-5.3          Launched 14 Aug 2026, a coding/agentic post-train of GLM-5.
+                   CAVEAT: at launch Zhipu said weights would follow in about
+                   two weeks, which pointed at 28 Aug. On 24 Aug they were not
+                   out. If you record before they land, GLM-5.3 is the one
+                   entry that is not yet genuinely open-weight -- either let the
+                   agent report that (it is an honest and interesting finding)
+                   or swap in GLM-5.2, whose weights are out.
 
 Things that may still bite
 --------------------------
