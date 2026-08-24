@@ -249,9 +249,15 @@ class BrowserSession:
                           None) or list(pages.values())[-1]
         else:
             # follow a tab opened after ours (target=_blank, window.open)
+            # Anything with real content counts, not just http(s). The point of
+            # this filter is to skip a blank placeholder tab or a devtools
+            # window -- but requiring http also excluded blob: URLs, which is
+            # how a page the agent generated itself gets opened. It built the
+            # report, opened it, and then kept talking to the tab behind it.
             fresh = [t for t in self._new_pages
                      if t in pages and t != self.cdp.page_target
-                     and pages[t]["url"].startswith("http")]
+                     and not pages[t]["url"].startswith(
+                         ("about:", "chrome:", "devtools:", "chrome-extension:"))]
             if fresh:
                 target = pages[fresh[-1]]
 

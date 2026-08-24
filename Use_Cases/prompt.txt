@@ -1,0 +1,107 @@
+Open-model comparison — demo task for Browsy
+============================================
+
+Paste the block between the lines into the chat panel and send it.
+
+Suggested launch (permissive, because the task spans many domains):
+
+    .\run.ps1 -Start google.com
+
+Notes before you run it are at the bottom of this file.
+
+
+-------------------------------- PROMPT --------------------------------
+I want a comparison of the 5 best open-weight LLMs available right now, each
+from a different company, and then a web page presenting it.
+
+Research first. For each model, find:
+  - who makes it, the release date, and the parameter sizes it ships in
+  - the licence, and whether it is genuinely open-weight or source-available
+  - two or three headline benchmark numbers, with the benchmark named
+  - what it is actually good at, and where it is weak
+  - how people feel about it in practice, not just on paper
+
+For the sentiment, go to YouTube and search for reviews of each model. Open two
+or three videos per model, read the top comments on each, and note what real
+users praise and complain about. Comment sections disagree with benchmark
+tables more often than you would think — where they do, say so.
+
+Work model by model. Finish one, remember() a compact note of what you found,
+then move to the next, so nothing is lost if the run gets long.
+
+When the research is done, build a single self-contained HTML page and open it
+in a new tab. Do it in one run_js call, like this:
+
+  const html = `...your complete page...`;
+  const blob = new Blob([html], {type: 'text/html'});
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+  return url;
+
+The page must be self-contained: all CSS inline in a <style> block, no external
+stylesheets, fonts, scripts or images — none of it will load. Build it from
+strings and numbers you actually found, never placeholders.
+
+Make it good:
+  - a dark theme, a clear title, and a one-paragraph summary of what you learnt
+  - a comparison table: model, maker, sizes, licence, benchmarks, release date
+  - a card per model with its strengths, weaknesses, and the public reaction
+  - pull-quotes from the actual YouTube comments, attributed to the video
+  - a closing section: which model you would pick for which job, and why
+  - readable at a glance — generous spacing, aligned columns, no wall of text
+
+After the tab opens, tell me in the chat what you concluded and where the
+comments and the benchmarks disagreed most.
+------------------------------ END PROMPT ------------------------------
+
+
+Why it is written this way
+--------------------------
+
+"in one run_js call"
+    The page has to be created in a single call. Each run_js runs in isolation,
+    so HTML assembled across several calls is lost between them.
+
+"open it in a new tab"
+    Browsy has no filesystem and cannot start a web server, so there is no local
+    file to host. The page is served by the browser itself from a blob: URL,
+    which is genuinely local — nothing touches the network. Chrome blocks
+    top-level navigation to data: URLs, so blob is the route that works.
+
+    The blob URL belongs to the page that created it. Whichever tab Browsy is on
+    when it runs the script must stay open, or the URL is revoked and the report
+    tab goes blank. Do not close it during recording.
+
+"self-contained"
+    The generated page has a blob: origin. External requests from it are
+    unreliable and a CDN font or script will simply not arrive.
+
+"remember() after each model"
+    Five models plus fifteen-odd YouTube pages is a long run. Notes survive a
+    context reset; the conversation may not.
+
+Verified before this was written
+--------------------------------
+
+Driven in a real browser: run_js builds the HTML, creates the blob URL, opens
+the tab, the session follows it, and the chat panel is still there on the
+generated page — so the whole thing is on camera in one shot.
+
+That last part needed a fix. sync_active_tab() only followed a new tab when its
+URL began with "http", which excluded blob: — so the agent would build the
+report, open it, and go on talking to the tab behind it. The filter now skips
+placeholder targets (about:, chrome:, devtools:) instead of requiring http.
+
+Things that may still bite
+--------------------------
+
+  - YouTube is heavy. Comments load lazily and need scrolling before they are
+    in the accessibility tree. Expect the agent to scroll, snapshot, scroll
+    again. This is the slowest part of the task by a wide margin.
+  - MAX_TURNS is 40 by default. This task can exceed that; raise it with
+    CUAEXP_MAX_TURNS if the run stops early with a partial answer.
+  - Run without --allow. The task legitimately spans YouTube, vendor sites,
+    Hugging Face, leaderboards and news. An allowlist will block it midway.
+    Do not stay signed into anything you care about while recording.
+  - Cost. The earlier ten-task OSWorld run came to $4.78 with 80% cached; this
+    one is comparable or larger, and most of it is YouTube snapshots.
