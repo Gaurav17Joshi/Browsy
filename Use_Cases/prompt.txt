@@ -11,20 +11,36 @@ Notes before you run it are at the bottom of this file.
 
 
 -------------------------------- PROMPT --------------------------------
-I want a comparison of the 5 best open-weight LLMs available right now, each
-from a different company, and then a web page presenting it.
+I want a comparison of five specific open-weight models, and then a web page
+presenting it. One model from each of these companies:
 
-Research first. For each model, find:
-  - who makes it, the release date, and the parameter sizes it ships in
+  - Alibaba, the newest Qwen release
+  - Meta, their newest open-weight release. The name might be something like
+    "Muse Spark" -- treat that as a rumour and confirm what it is actually
+    called before you use it anywhere
+  - Z.ai / Zhipu, the newest GLM release
+  - DeepSeek, their newest release
+  - Moonshot AI, Kimi K3
+
+In every case I want their LATEST model -- ideally something released in the
+last month or so. Find what that actually is; do not assume you know. If a
+company's newest is older than that, use it anyway and say how old it is.
+Record the exact model name and release date for each before going further,
+and tell me in the chat what five you settled on.
+
+Research each one. For each model, find:
+  - the exact release date and the parameter sizes it ships in
   - the licence, and whether it is genuinely open-weight or source-available
   - two or three headline benchmark numbers, with the benchmark named
   - what it is actually good at, and where it is weak
   - how people feel about it in practice, not just on paper
 
-For the sentiment, go to YouTube and search for reviews of each model. Open two
-or three videos per model, read the top comments on each, and note what real
-users praise and complain about. Comment sections disagree with benchmark
-tables more often than you would think — where they do, say so.
+For the sentiment, go to YouTube and search for reviews of each model by its
+real name. Open two or three videos per model, read the top comments on each,
+and note what real users praise and complain about. These are recent models, so
+prefer recent videos -- a review of last year's version is worse than useless.
+Comment sections disagree with benchmark tables more often than you would
+think — where they do, say so.
 
 Work model by model. Finish one, remember() a compact note of what you found,
 then move to the next, so nothing is lost if the run gets long.
@@ -75,6 +91,14 @@ Why it is written this way
 "self-contained"
     The generated page has a blob: origin. External requests from it are
     unreliable and a CDN font or script will simply not arrive.
+
+"find what that actually is; do not assume you know"
+    The models are named by vendor rather than by product on purpose. These
+    releases are weeks old; any name written into this file would be a guess,
+    and a confident wrong name is worse than none -- the agent would go and
+    research a model that does not exist. Naming the company and asking for its
+    newest release makes the task self-correcting, and web_search resolves it in
+    one call.
 
 "remember() after each model"
     Five models plus fifteen-odd YouTube pages is a long run. Notes survive a
