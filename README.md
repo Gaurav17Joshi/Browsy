@@ -11,11 +11,13 @@
 
 **An agent that drives a real Chrome, with a chat panel living inside the page.**
 
-[![Watch the demo](assets/demo-poster.png)](https://github.com/Gaurav17Joshi/Browsy/raw/main/assets/browsy-demo.mp4)
+<video src="https://github.com/Gaurav17Joshi/Browsy/raw/main/assets/browsy-demo.mp4" poster="https://github.com/Gaurav17Joshi/Browsy/raw/main/assets/demo-poster.png" controls muted playsinline width="820"></video>
+
+<sub>If the player does not load, <a href="https://github.com/Gaurav17Joshi/Browsy/raw/main/assets/browsy-demo.mp4">watch the file directly</a>.</sub>
 
 *Researching five open-weight models, reading YouTube comments for public
 sentiment, and building a comparison page — start to finish, 9 minutes, $3.10.
-Sped up 2× then 6×. [Watch](https://github.com/Gaurav17Joshi/Browsy/raw/main/assets/browsy-demo.mp4) · [Full run report →](Use_Cases/RUN-REPORT.md)*
+Sped up 2× then 6×. [Full run report →](Use_Cases/RUN-REPORT.md)*
 
 </div>
 
