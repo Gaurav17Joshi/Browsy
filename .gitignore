@@ -23,5 +23,5 @@ Session/
 # Files the user hands to Browsy, and anything it writes back
 workspace/
 
-# Screen recordings and rendered video (large binaries)
+# Raw screen recordings (hundreds of MB). The cut demo lives in assets/.
 Videos/
