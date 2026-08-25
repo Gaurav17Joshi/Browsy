@@ -22,3 +22,6 @@ Session/
 
 # Files the user hands to Browsy, and anything it writes back
 workspace/
+
+# Screen recordings and rendered video (large binaries)
+Videos/
