@@ -63,11 +63,10 @@ branch.
 macOS, so there is nothing to change -- just put the key at `~/.cuaexp/key` or
 export the variable.
 
-There is one further candidate appended only when `os.name == "nt"`: the
-absolute path the key sits at on the original Windows machine, so that box needs
-no setup. It is unreachable on macOS. Do not generalise it or add a Darwin
-equivalent -- the whole point is that no machine-specific path is on the shared
-code path.
+There is deliberately no machine-specific fallback. One existed briefly for the
+original Windows box and was removed before the repository went public: a path
+is not a secret, but it does tell a reader exactly where a live key sits on a
+shared machine. Do not add a Darwin equivalent.
 
 The OpenAI key deliberately lives **outside** the repo: only a path is
 configured, and the key is never copied in, logged or echoed. Preserve that

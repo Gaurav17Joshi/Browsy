@@ -16,13 +16,6 @@ KEYFILE_CANDIDATES = [
     Path.home() / ".config" / "cuaexp" / "key",
 ]
 
-# Last resort: where the key sits on the Windows box this was built on, so
-# that machine needs no setup. Only reached when both paths above are absent,
-# and it is a location, not a secret. Harmless elsewhere -- the file will not
-# exist, and the error then names the neutral default.
-if os.name == "nt":
-    KEYFILE_CANDIDATES.append(Path(r"C:\Users\render\blendcua.env.txt"))
-
 
 def _find_keyfile() -> Path:
     override = os.environ.get("CUAEXP_KEYFILE")

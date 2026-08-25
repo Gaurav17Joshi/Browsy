@@ -12,7 +12,7 @@ come out with genuine transparency so they can be overlaid on the footage.
 """
 import asyncio, base64, pathlib, sys
 
-ROOT = pathlib.Path(r"c:\Users\render\Joshi\Cuaexp")
+ROOT = pathlib.Path(__file__).resolve().parents[2]   # <repo>/Use_Cases/video/..
 sys.path.insert(0, str(ROOT))
 from cuaexp.recorder import Recorder
 from cuaexp.session import BrowserSession
