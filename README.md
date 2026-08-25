@@ -11,7 +11,7 @@
 
 **An agent that drives a real Chrome, with a chat panel living inside the page.**
 
-[![Watch the demo](assets/demo-poster.png)](https://github.com/Gaurav17Joshi/Browsy/raw/main/assets/browsy-demo.mp4)
+https://github.com/user-attachments/assets/b724606b-e41a-4371-ae02-6d83be47aab1
 
 *Researching five open-weight models, reading YouTube comments for public
 sentiment, and building a comparison page — start to finish, 9 minutes, $3.10.
