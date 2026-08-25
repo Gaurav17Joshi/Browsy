@@ -37,10 +37,19 @@ def _find_keyfile() -> Path:
 KEYFILE = _find_keyfile()
 
 # --- Models -----------------------------------------------------------------
-# GPT-5.6 family. Terra drives, Luna trims/extracts, Sol is the escalation.
-MODEL_DRIVER = os.environ.get("CUAEXP_MODEL_DRIVER", "gpt-5.6-terra")
-MODEL_CHEAP = os.environ.get("CUAEXP_MODEL_CHEAP", "gpt-5.6-luna")
+# GPT-5.6 family. Luna drives. Terra and Sol are kept here as the step-ups.
+#
+# Note that only MODEL_DRIVER is consumed anywhere -- the split in PLAN.md where
+# Luna trims snapshots and Sol takes over after repeated failure was designed but
+# never built, so one model does everything. Luna costs a tenth of Terra
+# ($0.20/$0.02/$1.20 against $2.00/$0.20/$12.00 per Mtok); against that, driving a
+# browser is the hardest job in the system, and a weaker driver can spend the
+# saving back in extra turns. Switch with CUAEXP_MODEL_DRIVER and compare on the
+# eval suite rather than by impression.
+MODEL_DRIVER = os.environ.get("CUAEXP_MODEL_DRIVER", "gpt-5.6-luna")
+MODEL_STRONG = os.environ.get("CUAEXP_MODEL_STRONG", "gpt-5.6-terra")
 MODEL_ESCALATE = os.environ.get("CUAEXP_MODEL_ESCALATE", "gpt-5.6-sol")
+MODEL_CHEAP = MODEL_DRIVER          # kept for import compatibility
 
 # USD per 1M tokens: (input, cached_input, output)
 PRICING = {

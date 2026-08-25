@@ -22,7 +22,7 @@ picks per step — no mode switch, no router:
 | **code** | `run_js` | extract, loop, compare, collect — one script beats twenty clicks |
 | **vision** | `screenshot` + `click_at` | canvas, dense grids, "what does this look like" |
 
-Everything runs on **GPT-5.6 Terra** through the **OpenAI Agents SDK** — the SDK
+Everything runs on **GPT-5.6 Luna** through the **OpenAI Agents SDK** — the SDK
 owns the agent loop, tool dispatch, streaming and tracing; we own perception,
 actions, context discipline and the security policy.
 

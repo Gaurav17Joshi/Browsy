@@ -106,6 +106,7 @@ Each step should carry: stable system prompt (for prompt caching) + running `mem
 - **Ref versioning.** Every ref carries its snapshot version; a stale ref makes the tool return "page changed, re-snapshot" instead of clicking whatever now occupies that slot. Kills the most common silent failure in browser agents.
 - **`memory` param.** The model writes what it has learned/done; verbose history is dropped.
 - **Models.** Terra drives, Luna trims and extracts, escalate to Sol after two consecutive failures on the same subgoal.
+  *(Superseded: none of this split was built. One model does everything, and the default driver is now Luna -- see `cuaexp/config.py`.)*
 - **Sessions** hold the thread. ↻ = start a new session, keep the browser where it is.
 
 ---
