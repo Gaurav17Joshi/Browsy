@@ -1,5 +1,12 @@
 """Render the title card, the end card and the speed badges as PNGs.
 
+The title card embeds the real mascot by importing MASCOT_SVG and PANEL_CSS
+from cuaexp.panel, so the card can never drift from the Browsy in the video.
+That drags the whole panel stylesheet in with it, and the panel defines its
+own .wrap (position:fixed, width:0) and .chip -- which flattened this layout
+into a zero-width column the first time. Card classes are prefixed bz* to
+stay clear of it.
+
 Chrome rather than ffmpeg drawtext: real typography, real layout, and the badges
 come out with genuine transparency so they can be overlaid on the footage.
 """
@@ -9,6 +16,7 @@ ROOT = pathlib.Path(r"c:\Users\render\Joshi\Cuaexp")
 sys.path.insert(0, str(ROOT))
 from cuaexp.recorder import Recorder
 from cuaexp.session import BrowserSession
+from cuaexp.panel import MASCOT_SVG, PANEL_CSS
 
 OUT = pathlib.Path(sys.argv[1])
 W, H = 2880, 1800
@@ -23,7 +31,7 @@ BASE = """
   .glow { position:absolute; inset:0;
           background:radial-gradient(1200px 700px at 50% 38%, rgba(70,120,255,.20), transparent 70%),
                      radial-gradient(900px 600px at 82% 88%, rgba(120,70,255,.14), transparent 70%) }
-  .wrap { position:relative; width:2180px; text-align:center }
+  .bzwrap { position:relative; width:2180px; text-align:center }
   .eyebrow { font-size:34px; letter-spacing:.42em; text-transform:uppercase;
              color:#7f8ea6; font-weight:600; margin-bottom:54px }
   h1 { font-size:118px; line-height:1.14; font-weight:700; letter-spacing:-.022em }
@@ -33,28 +41,35 @@ BASE = """
           background:linear-gradient(90deg,#6ea8ff,#a78bfa) }
   .sub { margin-top:56px; font-size:44px; color:#9aa6b8; line-height:1.5 }
   .models { margin-top:70px; display:flex; gap:20px; justify-content:center; flex-wrap:wrap }
-  .chip { font-size:33px; padding:18px 34px; border-radius:999px; color:#c7d2e2;
+  .bzchip { font-size:33px; padding:18px 34px; border-radius:999px; color:#c7d2e2;
           background:#171c25; border:1px solid #2a3240; font-weight:500 }
   .foot { position:absolute; left:0; right:0; bottom:96px; text-align:center;
           font-size:32px; color:#5d6a80; letter-spacing:.06em }
-  .bot { font-size:150px; margin-bottom:30px }
+  /* Browsy himself, straight out of cuaexp/panel.py, so the card cannot
+     drift from the mascot the video actually shows. */
+  .browsy { width:300px; height:300px; margin:0 auto 44px;
+            display:flex; align-items:center; justify-content:center }
+  .browsy .bot { width:300px !important; height:300px !important;
+                 filter:drop-shadow(0 26px 60px rgba(0,0,0,.55)) }
+  /* Freeze the idle animation so the capture is not caught mid-blink. */
+  .browsy .bot, .browsy .bot * { animation:none !important }
 </style>
 """
 
-TITLE = BASE + """
+TITLE = BASE + "<style>" + PANEL_CSS + "</style>" + """
 <div class="glow"></div>
-<div class="wrap">
-  <div class="bot">&#129302;</div>
+<div class="bzwrap">
+  <div class="browsy">""" + MASCOT_SVG + """</div>
   <div class="eyebrow">The task</div>
   <h1>Get the specs and the <span class="accent">real human experience</span><br>
       of five open&#8209;weight models &mdash;<br>then build a webpage to compare them.</h1>
   <div class="rule"></div>
   <div class="models">
-    <span class="chip">Qwen 3.8&#8209;27B</span>
-    <span class="chip">Muse Glimmer</span>
-    <span class="chip">DeepSeek V4&#8209;Pro</span>
-    <span class="chip">Kimi K3</span>
-    <span class="chip">GLM&#8209;5.3</span>
+    <span class="bzchip">Qwen 3.8&#8209;27B</span>
+    <span class="bzchip">Muse Glimmer</span>
+    <span class="bzchip">DeepSeek V4&#8209;Pro</span>
+    <span class="bzchip">Kimi K3</span>
+    <span class="bzchip">GLM&#8209;5.3</span>
   </div>
 </div>
 <div class="foot">BROWSY &middot; AN AGENT DRIVING A REAL CHROME</div>
@@ -76,7 +91,7 @@ END = BASE + """
   .wide .v { font-size:64px }
 </style>
 <div class="glow"></div>
-<div class="wrap">
+<div class="bzwrap">
   <div class="eyebrow">What it took</div>
   <h1 style="font-size:92px">One run, <span class="accent">start to finish</span></h1>
   <div class="grid">
