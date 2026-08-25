@@ -67,7 +67,7 @@ class Daemon:
         # sits there empty until the task ends -- which looks exactly like the
         # chat having vanished. These are cheap and idempotent, so answer them
         # out of band, immediately.
-        if kind in ("ready", "ui", "login"):
+        if kind in ("ready", "ui", "login", "logout"):
             return asyncio.create_task(self._handle_now(msg))
 
         return asyncio.create_task(self.queue.put(msg))
@@ -200,6 +200,13 @@ class Daemon:
             if self.current and not self.current.done():
                 self.current.cancel()
                 await self.push({"type": "assistant", "text": "Stopped."})
+            return
+
+        if kind not in ("message",):
+            # Anything that reaches the queue and matches nothing is a routing
+            # bug, not user error: "logout" sat here being dropped without a
+            # trace because it was never added to the out-of-band list above.
+            log.warning("panel sent %r, which nothing handles -- dropped", kind)
             return
 
         if kind == "message":
